@@ -4,30 +4,30 @@
 (require 2htdp/batch-io)
 ;;(read-words/line "ttt.txt")
 
-; An LLS is one of: 
+; An LLS is one of:
 ; – '()
 ; – (cons Los LLS)
 ; interpretation a list of lines, each is a list of Strings
- 
+
 (define line0 (cons "hello" (cons "world" '())))
 (define line1 '())
- 
+
 (define lls0 '())
 (define lls1 (cons line0 (cons line1 '())))
- 
+
 ; LLS -> List-of-numbers
-; determines the number of words on each line 
- 
+; determines the number of words on each line
+
 (check-expect (words-on-line lls0) '())
 (check-expect (words-on-line lls1) (cons 2 (cons 0 '())))
- 
+
 (define (words-on-line lls)
   (cond
     [(empty? lls) '()]
     [else (cons (length (first lls))
                 (words-on-line (rest lls)))]))
+
 ;; Figure 68: Counting the words on a line
-;; ...
 
 ; String -> List-of-numbers
 ; counts the words on each line in the given file
@@ -105,13 +105,13 @@
 
 ; 1String -> String
 ; converts the given 1String to a 3-letter numeric String
- 
+
 (check-expect (encode-letter "z") (code1 "z"))
 (check-expect (encode-letter "\t")
               (string-append "00" (code1 "\t")))
 (check-expect (encode-letter "a")
               (string-append "0" (code1 "a")))
- 
+
 (define (encode-letter s)
   (cond
     [(>= (string->int s) 100) (code1 s)]
@@ -119,12 +119,12 @@
      (string-append "00" (code1 s))]
     [(< (string->int s) 100)
      (string-append "0" (code1 s))]))
- 
+
 ; 1String -> String
 ; converts the given 1String into a String
- 
+
 (check-expect (code1 "z") "122")
- 
+
 (define (code1 c)
   (number->string (string->int c)))
 
@@ -219,7 +219,7 @@
   (cons(count-letters sometext)
        (cons(count-words sometext)
             (cons(count-lines sometext)'()))))
-  
+
 
 (check-expect(wc-text text523)(cons 12(cons 4(cons 2 '()))))
 
@@ -274,7 +274,7 @@
 
 
 ; Matrix -> Matrix
-; transposes the given matrix along the diagonal 
+; transposes the given matrix along the diagonal
 (define (transpose lln)
   (cond
     [(empty? (first lln)) '()]

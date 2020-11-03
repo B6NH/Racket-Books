@@ -17,7 +17,7 @@
    (action ((state "green") (next "yellow")))
    (action ((state "yellow") (next "red")))))
 
-; An Xexpr.v2 is a list: 
+; An Xexpr.v2 is a list:
 ; – (cons Symbol Body)
 ; – (cons Symbol (cons [List-of Attribute] Body))
 ; where Body is short for [List-of Xexpr.v2]
@@ -41,7 +41,7 @@
 ;; ans 3 - <start></start>
 
 (define a0 '((initial "X")))
- 
+
 (define e0 '(machine))
 (define e1 `(machine ,a0))
 (define e2 '(machine (action)))
@@ -118,7 +118,6 @@
 
 
 ;; 22.2 Rendering XML Enumerations
-;; ...
 
 ;; Exercise 370. Make up three
 
@@ -156,16 +155,16 @@
   (find-attr(xexpr-attr aword)'text))
 
 
-; An XEnum.v1 is one of: 
+; An XEnum.v1 is one of:
 ; – (cons 'ul [List-of XItem.v1])
 ; – (cons 'ul (cons Attributes [List-of XItem.v1]))
 ; An XItem.v1 is one of:
 ; – (cons 'li (cons XWord '()))
 ; – (cons 'li (cons Attributes (cons XWord '())))
 
-(define SIZE 12) ; font size 
-(define COLOR "black") ; font color 
-(define BT ; a graphical constant 
+(define SIZE 12) ; font size
+(define COLOR "black") ; font color
+(define BT ; a graphical constant
   (beside (circle 1 'solid 'black) (text " " SIZE COLOR)))
 
 ;; example item
@@ -202,7 +201,7 @@
 
 (define (render-enum1 xe)
   (local ((define content (xexpr-content xe))
-          ; XItem.v1 Image -> Image 
+          ; XItem.v1 Image -> Image
           (define (deal-with-one item so-far)
             (above/align 'left
                          (render-item1 item)
@@ -210,32 +209,32 @@
     (foldr deal-with-one empty-image content)))
 
 
-; An XItem.v2 is one of: 
+; An XItem.v2 is one of:
 ; – (cons 'li (cons XWord '()))
 ; – (cons 'li (cons [List-of Attribute] (list XWord)))
 ; – (cons 'li (cons XEnum.v2 '()))
 ; – (cons 'li (cons [List-of Attribute] (list XEnum.v2)))
-; 
+;
 ; An XEnum.v2 is one of:
 ; – (cons 'ul [List-of XItem.v2])
 ; – (cons 'ul (cons [List-of Attribute] [List-of XItem.v2]))
 
 ; Image -> Image
-; marks item with bullet  
+; marks item with bullet
 (define (bulletize item)
   (beside/align 'center BT item))
- 
+
 ; XEnum.v2 -> Image
-; renders an XEnum.v2 as an image 
+; renders an XEnum.v2 as an image
 (define (render-enum xe)
   (local ((define content (xexpr-content xe))
-          ; XItem.v2 Image -> Image 
+          ; XItem.v2 Image -> Image
           (define (deal-with-one item so-far)
             (above/align 'left (render-item item) so-far)))
     (foldr deal-with-one empty-image content)))
- 
+
 ; XItem.v2 -> Image
-; renders one XItem.v2 as an image 
+; renders one XItem.v2 as an image
 (define (render-item an-item)
   (local ((define content (first (xexpr-content an-item))))
     (bulletize
@@ -245,7 +244,6 @@
        [else(render-enum content)]))))
 
 ;; Exercise 373. Figure 128 is missing test
-;; ...
 
 
 (define hello-xitem-1
@@ -264,7 +262,7 @@
                       hello-xitem-2
                       hello-xitem-3))))
 
-   
+
 (check-expect
  (render-item hello-xitem-1)
  (beside/align 'center BT(text "hello" SIZE 'black)))
@@ -304,14 +302,13 @@
 
 
 ;; Exercise 374. The data definitions
-;; ...
 
-; An XItem.v2 is one of: 
+; An XItem.v2 is one of:
 ; – (cons 'li (cons XWord '()))
 ; – (cons 'li (cons [List-of Attribute] (cons XWord '())))
 ; – (cons 'li (cons XEnum.v2 '()))
 ; – (cons 'li (cons [List-of Attribute] (cons XEnum.v2 '())))
-; 
+;
 ; An XEnum.v2 is one of:
 ; – (cons 'ul [List-of XItem.v2])
 ; – (cons 'ul (cons [List-of Attribute] [List-of XItem.v2]))
@@ -326,7 +323,7 @@
       [(word? content)
        (if(string=?(word-text content)"hello")1 0)]
       [else(count-hello-enum content)])))
-  
+
 
 (define (count-hello-enum xe)
   (local ((define content (xexpr-content xe))
@@ -352,13 +349,13 @@
                (cond
                  [(word? content)
                   (local((define text(word-text content))
-                         (define newtext(if(string=? "hello" text)"bye" text))) 
+                         (define newtext(if(string=? "hello" text)"bye" text)))
                     (cons`(word((text ,newtext)))'()))]
                  [else
                   (cons(replace-hello-enum content)'())])))
             (if(empty? attrs)result(cons attrs result))))))
 
-  
+
 (define (replace-hello-enum xe)
   (local ((define content (xexpr-content xe))
           (define attrs (xexpr-attr xe))
@@ -399,7 +396,7 @@
      'li
      (list (list 'color "red") (list 'padding 2))
      (list 'word (list (list 'text "BBB"))))))))
- 
+
 (check-expect
  (replace-hello-item hello-xitem-4)
  (list
@@ -415,7 +412,6 @@
 
 
 ;; 22.3 Domain-Specific Languages
-;; ...
 
 ; An FSM is a [List-of 1Transition]
 ; A 1Transition is a list of two items:
@@ -433,8 +429,8 @@
     (if (cons? fm) (second fm) (error "not found"))))
 
 
-; FSM FSM-State -> FSM-State 
-; matches the keys pressed by a player with the given FSM 
+; FSM FSM-State -> FSM-State
+; matches the keys pressed by a player with the given FSM
 (define (simulate state0 transitions)
   (big-bang state0 ; FSM-State
     [to-draw
@@ -508,8 +504,8 @@
     (map xaction->action (xexpr-content xm))))
 
 
-; XMachine -> FSM-State 
-; interprets the given configuration as a state machine 
+; XMachine -> FSM-State
+; interprets the given configuration as a state machine
 (define (simulate-xmachine xm)
   (simulate (xm-state0 xm) (xm->transitions xm)))
 
@@ -525,7 +521,7 @@
        #false)))
 
 ; Xexpr.v3 String -> String
-; retrieves the value of the "content" attribute 
+; retrieves the value of the "content" attribute
 ; from a 'meta element that has attribute "itemprop"
 ; with value s
 (check-expect
@@ -546,5 +542,3 @@
 
 
 ;; 23 Simultaneous Processing
-;; ...
-

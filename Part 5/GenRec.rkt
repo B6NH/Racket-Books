@@ -188,9 +188,9 @@
   (cond
     [(empty? l) '()]
     [(cons? l) (insert (first l) (sort< (rest l)))]))
- 
+
 ; Number List-of-numbers -> List-of-numbers
-; inserts n into the sorted list of numbers l 
+; inserts n into the sorted list of numbers l
 (define (insert n l)
   (cond
     [(empty? l) (cons n '())]
@@ -293,7 +293,7 @@
  (special3'("aGe" "seX" "location" "WAVE"))
  '("AGE" "SEX" "LOCATION" "WAVE"))
 
-;; Completing the first three steps of the design recipe is straightforward: 
+;; Completing the first three steps of the design recipe is straightforward:
 
 ; N[>= 1] N[>= 1] -> N
 ; finds the greatest common divisor of n and m
@@ -321,7 +321,7 @@
 (define (gcd-generative n m)
   (local (; N[>= 1] N[>=1] -> N
           ; generative recursion
-          ; (gcd L S) == (gcd S (remainder L S)) 
+          ; (gcd L S) == (gcd S (remainder L S))
           (define (clever-gcd L S)
             (cond
               [(= S 0) L]
@@ -334,7 +334,6 @@
 ;; (time (gcd-structural 101135853 45014640))
 
 ;; Exercise 442. Add sort< and quick-sort< to the definitions area.
-;; ...
 
 (define(create-test size)
   (cond
@@ -462,4 +461,3 @@
 
 (check-expect (gcd-structural-v2 6 25) 1)
 (check-expect (gcd-structural-v2 18 24) 6)
-

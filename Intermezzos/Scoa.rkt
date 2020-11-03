@@ -5,8 +5,7 @@
 ;; Intermezzo 3: Scope and Abstraction
 
 ;; ISL for Loops
-;; ...
- 
+
 (define (enumerate lx)
   (for/list ([x lx] [ith (length lx)])
     (list (+ ith 1) x)))
@@ -34,10 +33,10 @@
 
 ; [List-of X] [List-of Y] -> [List-of [List X Y]]
 ; generates all pairs of items from l1 and l2
- 
+
 (check-satisfied (cross '(a b c) '(1 2))
                  (lambda (c) (= (length c) 6)))
- 
+
 (define (cross l1 l2)
    (for*/list ([x1 l1][x2 l2])
       (list x1 x2)))
@@ -72,5 +71,3 @@
 (check-expect
  (words-on-line(list(list "a" "b" "c")'()(list "a" "b")))
  (list 3 0 2))
-
-
