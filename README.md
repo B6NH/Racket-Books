@@ -1,4 +1,6 @@
 # HTDP2
+![Screenshot](https://i.imgur.com/VboyZTx.png)
+
 How to Design Programs, Second Edition - Exercises
 
 ## Table of Contents
