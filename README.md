@@ -4,7 +4,7 @@ Solutions to exercises from book "How to Design Programs", 2nd Edition
 
 * Savannah Tree
 
-![Savannah](https://i.imgur.com/fpQlRhz.png)
+![Savannah](https://i.imgur.com/MJFOT5g.png)
 
 * Tetris
 
@@ -17,6 +17,14 @@ Solutions to exercises from book "How to Design Programs", 2nd Edition
 * Cannibals
 
 ![Cannibals](https://i.imgur.com/hnpaqag.png)
+
+* Sierpinski Triangle
+
+![Sierpinski](https://i.imgur.com/Td7TqKA.png)
+
+* Bezier Curve
+
+![Bezier](https://i.imgur.com/Yk8oajA.png)
 
 ## Table of Contents
 
