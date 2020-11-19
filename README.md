@@ -1,7 +1,22 @@
 # HTDP2
-![Screenshot](https://i.imgur.com/VboyZTx.png)
 
-How to Design Programs, Second Edition - Exercises
+Solutions to exercises from book "How to Design Programs", 2nd Edition
+
+* Savannah Tree
+
+![Savannah](https://i.imgur.com/fpQlRhz.png)
+
+* Tetris
+
+![Tetris](https://i.imgur.com/56zoefw.png)
+
+* Snake
+
+![Snake](https://i.imgur.com/wjEdQpt.png)
+
+* Cannibals
+
+![Cannibals](https://i.imgur.com/hnpaqag.png)
 
 ## Table of Contents
 
