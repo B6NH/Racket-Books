@@ -17,9 +17,8 @@
         (else 'huh?)))
 
 (define(helper a b)
-  (let ((av (roman-value a))
-        (bv (roman-value b)))
-    ((if (> bv av) - +) av)))
+  (let ((av (roman-value a)))
+    ((if (> (roman-value b) av) - +) av)))
 
 (define(arabic rmn)
   (if (= (count rmn) 1)

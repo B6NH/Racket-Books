@@ -2,4 +2,6 @@
 
 #lang racket
 
+; Argument never changes
+
 #t
