@@ -16,16 +16,15 @@
         ((equal? letter 'm) 1000)
         (else 'huh?)))
 
-(define(helper a b)
-  (let ((av (roman-value a)))
-    ((if (> (roman-value b) av) - +) av)))
-
-(define(arabic rmn)
-  (if (= (count rmn) 1)
-      (roman-value rmn)
-      (+ (helper (first rmn) (second rmn))
-         (arabic (bf rmn)))))
+(define (arabic s)
+  (let ((fval (roman-value (first s))))
+    (if (= (count s) 1)
+        fval
+        (let ((rst (bf s)))
+          (+ ((if (> (roman-value (first rst)) fval) - +) fval)
+             (arabic rst))))))
 
 (and
   (equal? (arabic 'mcmlxxi) 1971)
   (equal? (arabic 'mlxvi) 1066))
+
