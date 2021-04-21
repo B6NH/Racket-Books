@@ -2,4 +2,6 @@
 
 #lang racket
 
+; This would also cause an error
+
 #t

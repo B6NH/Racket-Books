@@ -2,4 +2,6 @@
 
 #lang racket
 
+; Only a number
+
 #t

@@ -2,7 +2,7 @@
 
 #lang racket
 
-#t
+; It calls match-using-known-values if
+; min = 0 and returns 'failed otherwise
 
-; Backtracking
-; ?
+#t
