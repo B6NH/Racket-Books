@@ -20,7 +20,6 @@
             (bf sent)
             (se fst (remove-once wd rst))))))
 
-
 (define (mysort sent fn)
   (if (empty? sent)
       '()
@@ -28,8 +27,47 @@
         (se wd (mysort (remove-once wd sent) fn)))))
 
 
+(define (mymergesort lst fn)
+  (if (<= (length lst) 1)
+      lst
+      (mymerge (mymergesort (one-half lst) fn)
+               (mymergesort (other-half lst) fn)
+               fn)))
+
+(define (mymerge left right fn)
+  (cond
+    ((empty? left) right)
+    ((empty? right) left)
+    ((fn (car left) (car right))
+     (cons (car left)
+           (mymerge (cdr left) right fn)))
+    (else
+      (cons (car right)
+            (mymerge left (cdr right) fn)))))
+
+(define (one-half lst)
+  (if (<= (length lst) 1)
+      lst
+      (cons (first lst)
+            (one-half (cddr lst)))))
+
+(define (other-half lst)
+  (if (<= (length lst) 1)
+      '()
+      (cons (cadr lst)
+          (other-half (cddr lst)))))
+
+
+(define numbers '(4 23 7 5 16 3))
+(define nasc '(3 4 5 7 16 23))
+(define ndsc '(23 16 7 5 4 3))
+(define names '(john paul george ringo))
+(define nsorted '(george john paul ringo))
+
 (and
-  (equal? (mysort '(4 23 7 5 16 3) <) '(3 4 5 7 16 23))
-  (equal? (mysort '(4 23 7 5 16 3) >) '(23 16 7 5 4 3))
-  (equal? (mysort '(john paul george ringo) before?)
-          '(george john paul ringo)))
+  (equal? (mysort numbers <) nasc)
+  (equal? (mysort numbers >) ndsc)
+  (equal? (mysort names before?) nsorted)
+  (equal? (mymergesort numbers >) ndsc)
+  (equal? (mymergesort numbers <) nasc)
+  (equal? (mymergesort names before?) nsorted))
