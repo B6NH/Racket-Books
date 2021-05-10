@@ -2,4 +2,6 @@
 
 #lang racket
 
+; It discards wrong input
+
 #t

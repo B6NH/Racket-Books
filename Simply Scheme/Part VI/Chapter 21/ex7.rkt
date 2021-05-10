@@ -2,4 +2,6 @@
 
 #lang racket
 
+; Function can accept any value
+
 #t

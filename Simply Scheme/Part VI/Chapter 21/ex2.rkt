@@ -2,4 +2,6 @@
 
 #lang racket
 
+; Value must be a function
+
 #t

@@ -2,4 +2,6 @@
 
 #lang racket
 
+; Solution in file ex6.rkt
+
 #t
