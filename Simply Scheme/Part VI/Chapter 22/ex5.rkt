@@ -2,4 +2,7 @@
 
 #lang racket
 
+(define (remove-cons file)
+  #t)
+
 #t
