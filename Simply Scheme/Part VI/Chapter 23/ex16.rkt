@@ -90,21 +90,42 @@
       (vecons (fn (vfirst sent))
               (every fn (vbutfirst sent)))))
 
+(define (every2-helper fn old new index)
+  (if (= index -1)
+      new
+      (begin
+        (vector-set! new index (fn (vector-ref old index)))
+        (every2-helper fn old new (- index 1)))))
+
+(define (every2 fn sent)
+  (let ((len (vector-length sent)))
+    (every2-helper fn sent (make-vector len) (- len 1))))
+
+
+(define abc (sentence 'a 'b 'c))
+(define mbair #(music book air))
+(define ftiflower #(fish tiger flower))
+(define numbers #(5 6 7))
+(define new-numbers #(10 12 14))
+
+(define (double x)
+  (* x 2))
 
 (and
   (equal? (vempty? (sentence)) #t)
-  (equal? (vempty? (sentence 'a 'b 'c)) #f)
-  (equal? (vfirst (sentence 'a 'b 'c)) 'a)
-  (equal? (vlast (sentence 'a 'b 'c)) 'c)
-  (equal? (vbutfirst (sentence 'a 'b 'c)) #(b c))
-  (equal? (vbutlast (sentence 'a 'b 'c)) #(a b))
+  (equal? (vempty? abc) #f)
+  (equal? (vfirst abc) 'a)
+  (equal? (vlast abc) 'c)
+  (equal? (vbutfirst abc) #(b c))
+  (equal? (vbutlast abc) #(a b))
   (equal? (real-length '(water (fire air))) 3)
   (equal? (praise 'water) #(water is good))
   (equal? (praise '(water fire)) #(water fire is good))
   (equal? (praise2 'air) #(air rules!))
   (equal? (praise2 '(hello world)) #(hello world rules!))
-  (equal? (item 1 #(music book air)) 'music)
-  (equal? (item-v2 1 #(music book air)) 'music)
-  (equal? (item 3 #(fish tiger flower)) 'flower)
-  (equal? (item-v2 3 #(fish tiger flower)) 'flower)
-  (equal? (every (lambda(x)(* x 2)) #(5 6 7)) #(10 12 14)))
+  (equal? (item 1 mbair) 'music)
+  (equal? (item-v2 1 mbair) 'music)
+  (equal? (item 3 ftiflower) 'flower)
+  (equal? (item-v2 3 ftiflower) 'flower)
+  (equal? (every double numbers) new-numbers)
+  (equal? (every2 double numbers) new-numbers))
