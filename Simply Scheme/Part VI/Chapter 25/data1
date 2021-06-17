@@ -1,0 +1,33 @@
+(put 'name a1)
+(put 'biology b1)
+(put 'chemistry c1)
+(put 'geography d1)
+(put 'science e1)
+(put 'sum f1)
+
+(put 'allie a2)
+(put 'john a3)
+(put 'mark a4)
+(put 'veronica a5)
+
+(put 5 b2)
+(put 5 c2)
+(put 5 d2)
+(put 5 e2)
+
+(put 4 b3)
+(put 3 c3)
+(put 5 d3)
+(put 2 e3)
+
+(put 3 b4)
+(put 3 c4)
+(put 4 d4)
+(put 3 e4)
+
+(put 4 b5)
+(put 6 c5)
+(put 2 d5)
+(put 3 e5)
+
+(put (+ (cell b) (cell c) (cell d) (cell e)) f)

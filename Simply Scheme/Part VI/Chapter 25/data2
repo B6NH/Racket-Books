@@ -1,0 +1,6 @@
+(put 0.5 a1)
+(put (+ (cell * <1) 0.5) a)
+(put (* (cell a) 0.05) b)
+(put (* (cell a) 0.15) c)
+(put (+ (cell a) (cell b) (cell c)) d)
+(put (ceiling (cell d)) e)

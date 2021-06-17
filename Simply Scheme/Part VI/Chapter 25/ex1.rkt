@@ -3,6 +3,9 @@
 #lang racket
 (require (planet dyoo/simply-scheme:2:2))
 
+(define total-cols 26)
+(define total-rows 30)
+
 (define (spreadsheet)
   (init-array)
   (set-selection-cell-id! (make-id 1 1))
@@ -52,7 +55,7 @@
 
 (define (next-row delta)
   (let ((row (id-row (selection-cell-id))))
-    (if (> (+ row delta) 30)
+    (if (> (+ row delta) total-rows)
         (error "Already at bottom.")
         (set-selected-row! (+ row delta)))))
 
@@ -64,7 +67,7 @@
 
 (define (next-col delta)
   (let ((col (id-column (selection-cell-id))))
-    (if (> (+ col delta) 26)
+    (if (> (+ col delta) total-cols)
         (error "Already at right.")
         (set-selected-column! (+ col delta)))))
 
@@ -128,25 +131,25 @@
   (cond
     ((null? where)
      (put-formula-in-cell formula (selection-cell-id)))
-  ((cell-name? (car where))
-   (put-formula-in-cell formula (cell-name->id (car where))))
-  ((number? (car where))
-   (put-all-cells-in-row formula (car where)))
-  ((letter? (car where))
-   (put-all-cells-in-col formula (letter->number (car where))))
-  (else (error "Put it where?"))))
+    ((cell-name? (car where))
+      (put-formula-in-cell formula (cell-name->id (car where))))
+    ((number? (car where))
+      (put-all-cells-in-row formula (car where)))
+    ((letter? (car where))
+      (put-all-cells-in-col formula (letter->number (car where))))
+    (else (error "Put it where?"))))
 
 (define (put-all-cells-in-row formula row)
-  (put-all-helper formula (lambda (col) (make-id col row)) 1 26))
+  (put-all-helper formula (lambda (col) (make-id col row)) 1 total-cols))
 
 (define (put-all-cells-in-col formula col)
-  (put-all-helper formula (lambda (row) (make-id col row)) 1 30))
+  (put-all-helper formula (lambda (row) (make-id col row)) 1 total-rows))
 
 (define (put-all-helper formula id-maker this max)
   (if (> this max)
       'done
       (begin (try-putting formula (id-maker this))
-        (put-all-helper formula id-maker (+ 1 this) max))))
+             (put-all-helper formula id-maker (+ 1 this) max))))
 
 (define (try-putting formula id)
   (if (or (null? (cell-value id)) (null? formula))
@@ -170,12 +173,12 @@
 
 (define *the-commands*
   (list (list 'p prev-row)
-  (list 'n next-row)
-  (list 'b prev-col)
-  (list 'f next-col)
-  (list 'select select)
-  (list 'put put)
-  (list 'load spreadsheet-load)))
+        (list 'n next-row)
+        (list 'b prev-col)
+        (list 'f next-col)
+        (list 'select select)
+        (list 'put put)
+        (list 'load spreadsheet-load)))
 
 
 ;;; Pinning Down Formulas Into Expressions
@@ -186,7 +189,7 @@
     ((word? formula) formula)
     ((null? formula) '())
     ((equal? (car formula) 'cell)
-     pin-down-cell (cdr formula) id)
+     (pin-down-cell (cdr formula) id))
     (else
       (bound-check
         (map (lambda (subformula) (pin-down subformula id)) formula)))))
@@ -205,11 +208,12 @@
            ((letter? (car args))         ; they chose a column
             (make-id (letter->number (car args))
                      (id-row reference-id)))
-           (else (error "Bad cell specification:" (cons 'cell args)))))
+           (else
+            (error "Bad cell specification:" (cons 'cell args)))))
     (else
       (let ((col (pin-down-col (car args) (id-column reference-id)))
             (row (pin-down-row (cadr args) (id-row reference-id))))
-        (if (and (>= col 1) (<= col 26) (>= row 1) (<= row 30))
+        (if (and (>= col 1) (<= col total-cols) (>= row 1) (<= row total-rows))
             (make-id col row)
             'out-of-bounds)))))
 
@@ -229,6 +233,8 @@
     ((equal? (first new) '<) (- old (bf new)))
     (else (error "What row?"))))
 
+
+; HERE HERE HERE HERE
 
 ;;; Dependency Management
 
@@ -311,32 +317,32 @@
 
 (define *the-functions*
   (list (list '* *)
-  (list '+ +)
-  (list '- -)
-  (list '/ /)
-  (list 'abs abs)
-  (list 'acos acos)
-  (list 'asin asin)
-  (list 'atan atan)
-  (list 'ceiling ceiling)
-  (list 'cos cos)
-  (list 'count count)
-  (list 'exp exp)
-  (list 'expt expt)
-  (list 'floor floor)
-  (list 'gcd gcd)
-  (list 'lcm lcm)
-  (list 'log log)
-  (list 'max max)
-  (list 'min min)
-  (list 'modulo modulo)
-  (list 'quotient quotient)
-  (list 'remainder remainder)
-  (list 'round round)
-  (list 'sin sin)
-  (list 'sqrt sqrt)
-  (list 'tan tan)
-  (list 'truncate truncate)))
+        (list '+ +)
+        (list '- -)
+        (list '/ /)
+        (list 'abs abs)
+        (list 'acos acos)
+        (list 'asin asin)
+        (list 'atan atan)
+        (list 'ceiling ceiling)
+        (list 'cos cos)
+        (list 'count count)
+        (list 'exp exp)
+        (list 'expt expt)
+        (list 'floor floor)
+        (list 'gcd gcd)
+        (list 'lcm lcm)
+        (list 'log log)
+        (list 'max max)
+        (list 'min min)
+        (list 'modulo modulo)
+        (list 'quotient quotient)
+        (list 'remainder remainder)
+        (list 'round round)
+        (list 'sin sin)
+        (list 'sqrt sqrt)
+        (list 'tan tan)
+        (list 'truncate truncate)))
 
 ;;; Printing the Screen
 
@@ -509,10 +515,10 @@
 (define (cell-structure-from-indices col row)
   (global-array-lookup col row))
 
-(define *the-spreadsheet-array* (make-vector 30))
+(define *the-spreadsheet-array* (make-vector total-rows))
 
 (define (global-array-lookup col row)
-  (if (and (<= row 30) (<= col 26))
+  (if (and (<= row total-rows) (<= col total-cols))
       (vector-ref
         (vector-ref *the-spreadsheet-array* (- row 1))
         (- col 1))
@@ -525,7 +531,7 @@
   (if (< n 0)
       'done
       (begin
-        (vector-set! *the-spreadsheet-array* n (make-vector 26))
+        (vector-set! *the-spreadsheet-array* n (make-vector total-cols))
         (fill-row-with-cells
           (vector-ref *the-spreadsheet-array* n) 25)
         (fill-array-with-rows (- n 1)))))
