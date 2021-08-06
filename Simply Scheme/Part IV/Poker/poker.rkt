@@ -3,7 +3,7 @@
 #lang racket
 (require (planet dyoo/simply-scheme:2:2))
 
-(define hand-size 5)
+
 (define suits '(h s c d))
 (define ranks '(2 3 4 5 6 7 8 9 10 j q k a))
 
@@ -12,6 +12,11 @@
                      (5 fifths)(6 sixes)(7 sevens)
                      (8 eights)(9 nines)(10 tens)
                      (j jacks)(q queens)(k kings)(a aces)))
+(define singular-ranks '((2 two)(3 three)(4 four)
+                         (5 five)(6 six)(7 seven)
+                         (8 eight)(9 nine)(10 ten)
+                         (j jack)(q queen)(k king)(a ace)))
+
 
 (define (get-suit-name-helper symbol snames)
   (if (equal? symbol (caar snames))
@@ -28,6 +33,14 @@
 
 (define (get-rank-name symbol)
   (get-rank-name-helper symbol rank-names))
+
+(define (singular-rank-helper symbol names)
+  (if (equal? symbol (caar names))
+      (cadar names)
+      (singular-rank-helper symbol (cdr names))))
+
+(define (get-singular-rank symbol)
+  (singular-rank-helper symbol singular-ranks))
 
 
 (define (all-same-suit s-data)
@@ -106,7 +119,11 @@
        (last-four r-data)))
 
 (define (full-house r-data)
-  (and (three-kind r-data) (two-kind r-data)))
+  (let ((three (three-kind r-data))
+        (two (two-kind r-data)))
+    (if (and two three)
+        (se two three)
+        #f)))
 
 (define (two-pair-helper rank-data c acc)
   (cond
@@ -143,38 +160,42 @@
     (if height
         (if (= (last (car rank-data)) 1)
             (se 'royal 'flush '- suname)
-            (if (four-kind rank-data)
-                (se 'four 'kind)
-                (se height '- 'high 'straight 'flush '- suname)))
+            (se (get-singular-rank height) '- 'high 'straight 'flush '- suname))
         (if (wrap-straight rank-data)
-            (se 5 '- 'high 'straight 'flush '- suname)
-            (cond
-              ((four-kind rank-data) (se 'four 'kind '- suname))
-              ((full-house rank-data) (se 'full 'house))
-              (else (se 'flush same-suit)))))))
+            (se 'five '- 'high 'straight 'flush '- suname)
+            (let ((val (full-house rank-data)))
+              (if val
+                (se 'full 'house '- (get-rank-name (cadr val))
+                                    'over
+                                    (get-rank-name (car val)))
+                (se 'flush '- suname)))))))
 
 (define (check-different-suit rank-data)
-  (cond
-    ((four-kind rank-data) (se 'four 'kind))
-    ((full-house rank-data) (se 'full 'house))
-    (else
-      (let ((height (five-in-row rank-data)))
-        (if height
-            (se height '- 'high 'straight)
-            (cond
-              ((wrap-straight rank-data)
-               (se 5 '- 'high 'straight))
-              ((three-kind rank-data)(se 'three 'kind))
-              (else
-                (let ((pairs (two-pair rank-data)))
-                  (if pairs
-                    (se 'two 'pair '- (get-rank-name (car pairs))
-                                      'and
-                                      (get-rank-name (cadr pairs)))
-                    (let ((rank (two-kind rank-data)))
-                      (if rank
-                        (se 'pair '- (get-rank-name rank))
-                        '(nothing))))))))))))
+  (let ((val (four-kind rank-data)))
+    (if val
+      (se 'four 'kind '- (get-rank-name val))
+      (let ((val (full-house rank-data)))
+        (if val
+          (se 'full 'house '- (get-rank-name (cadr val))
+                              'over
+                              (get-rank-name (car val)))
+          (let ((height (five-in-row rank-data)))
+            (if height
+                (se (get-singular-rank height) '- 'high 'straight)
+                (if (wrap-straight rank-data)
+                    (se 'five '- 'high 'straight)
+                    (let ((val (three-kind rank-data)))
+                      (if val
+                       (se 'three 'kind '- (get-rank-name val))
+                       (let ((pairs (two-pair rank-data)))
+                         (if pairs
+                             (se 'two 'pair '- (get-rank-name (car pairs))
+                                               'and
+                                               (get-rank-name (cadr pairs)))
+                             (let ((rank (two-kind rank-data)))
+                               (if rank
+                                   (se 'pair '- (get-rank-name rank))
+                                   '(nothing)))))))))))))))
 
 ; Compute rank and suit data
 ; Use it later
@@ -187,39 +208,46 @@
           (check-different-suit rank-data)))))
 
 
+(and
 
-; 1 - Royal flush: ten, jack, queen, king, and ace, all of the same suit
-(equal? (poker-value '(dq d10 dj da dk)) '(royal flush - diamonds))
-(equal? (poker-value '(sq sk sa sj s10)) '(royal flush - spades))
+  ; 1 - Royal flush: ten, jack, queen, king, and ace, all of the same suit
+  (equal? (poker-value '(dq d10 dj da dk)) '(royal flush - diamonds))
+  (equal? (poker-value '(sq sk sa sj s10)) '(royal flush - spades))
 
-; 2 - Straight flush: five cards of sequential rank, all of the same suit
-(equal? (poker-value '(d5 d7 d6 d8 d4)) '(8 - high straight flush - diamonds))
-(equal? (poker-value '(h5 h2 ha h3 h4)) '(5 - high straight flush - hearts))
+  ; 2 - Straight flush: five cards of sequential rank, all of the same suit
+  (equal? (poker-value '(d5 d7 d6 d8 d4)) '(eight - high straight flush - diamonds))
+  (equal? (poker-value '(h5 h2 ha h3 h4)) '(five - high straight flush - hearts))
 
-; 3 - Four of a kind: four cards of the same rank
-(equal? (poker-value '(d5 h4 c5 s5 s5)) '(four kind))
+  ; 3 - Four of a kind: four cards of the same rank
+  (equal? (poker-value '(d5 h4 c5 s5 s5)) '(four kind - fifths))
+  (equal? (poker-value '(cq sq dq h5 sq)) '(four kind - queens))
 
-; 4 - Full house: three cards of the same rank, and two of a second rank
-(equal? (poker-value '(h4 s4 c6 s6 c4)) '(full house))
-(equal? (poker-value '(d4 d4 d6 d6 d4)) '(full house))
+  ; 4 - Full house: three cards of the same rank, and two of a second rank
+  (equal? (poker-value '(h4 s4 c6 s6 c4)) '(full house - fours over sixes))
+  ;(equal? (poker-value '(d3 d3 dq dq d3)) '(full house - threes over queens))
 
-; 5 - Flush: five cards of the same suit, not sequential rank
-(equal? (poker-value '(h3 h6 h8 h hk)) '(flush h))
+  ; 5 - Flush: five cards of the same suit, not sequential rank
+  (equal? (poker-value '(h3 h6 h8 hq hk)) '(flush - hearts))
+  (equal? (poker-value '(c7 c4 cq c9 ck)) '(flush - clubs))
 
-; 6 - Straight: five cards of sequential rank, not all of the same suit
-(equal? (poker-value '(d2 h4 d3 c6 d5)) '(6 - high straight))
+  ; 6 - Straight: five cards of sequential rank, not all of the same suit
+  (equal? (poker-value '(d2 h4 d3 c6 d5)) '(six - high straight))
+  (equal? (poker-value '(d7 h8 d10 c9 dj)) '(jack - high straight))
 
-; 7 - Three of a kind: three cards of the same rank, no other matches
-(equal? (poker-value '(h3 d3 d8 c2 d3)) '(three kind))
+  ; 7 - Three of a kind: three cards of the same rank, no other matches
+  (equal? (poker-value '(h3 d3 d8 c2 d3)) '(three kind - threes))
+  (equal? (poker-value '(ca s3 sa h2 ca)) '(three kind - aces))
 
-; 8 - Two pair: two pairs of cards, of two different ranks
-(equal? (poker-value '(h3 d3 d2 c2 d9)) '(two pair - twos and threes))
-(equal? (poker-value '(hq da d2 ca dq)) '(two pair - queens and aces))
+  ; 8 - Two pair: two pairs of cards, of two different ranks
+  (equal? (poker-value '(h3 d3 d2 c2 d9)) '(two pair - twos and threes))
+  (equal? (poker-value '(hq da d2 ca dq)) '(two pair - queens and aces))
 
-; 9 - Pair: two cards of the same rank, no other matches
-(equal? (poker-value '(h3 d3 d8 c2 d9)) '(pair - threes))
-(equal? (poker-value '(h3 dq s9 c2 d9)) '(pair - nines))
+  ; 9 - Pair: two cards of the same rank, no other matches
+  (equal? (poker-value '(h3 d3 d8 c2 d9)) '(pair - threes))
+  (equal? (poker-value '(h3 dq s9 c2 d9)) '(pair - nines))
 
-; 10 - Nothing: none of the above
-(equal? (poker-value '(h2 d4 d8 ck dq)) '(nothing))
-(equal? (poker-value '(h3 d9 d7 c1 dj)) '(nothing))
+  ; 10 - Nothing: none of the above
+  (equal? (poker-value '(h2 d4 d8 ck dq)) '(nothing))
+  (equal? (poker-value '(h3 d9 d7 c1 dj)) '(nothing)))
+
+
