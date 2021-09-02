@@ -2,4 +2,6 @@
 
 #lang racket
 
+;; Add digit prefix to column symbol
+
 #t

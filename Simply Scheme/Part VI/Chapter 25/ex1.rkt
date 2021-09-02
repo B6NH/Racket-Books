@@ -3,39 +3,79 @@
 #lang racket
 (require (planet dyoo/simply-scheme:2:2))
 
+;; Implementation notes
+;; Cells are stored as vector of vectors
+;; They are selected by columns and rows
+;; Cell id is list, e.g. (id 3 5)
+;; Cell is vector of length 4
+
+;; Navigation Commands
+;; Up - p
+;; Down - n
+;; Left - b
+;; Right - f
+
+;; Data commands (put value cell)
+;; Set selected cell to 8 (put 8)
+;; Set a6 to 5 - (put 5 a6)
+;; Set all row 10 to 3 - (put 3 10)
+;; Set all col d to 6 - (put 6 d)
+;; Non-empty cell values arent modified during row/cell assignments
+
 (define total-cols 26)
 (define total-rows 30)
 
+;; Main function
 (define (spreadsheet)
+
+  ;; Fill *the-spreadsheet-array* with rows, columns and cells
   (init-array)
+
+  ;; Vector *special-cells* size is 2
+
+  ;; Set (*special-cells* 0) to '(id 1 1)
+  ;; Selected cell
   (set-selection-cell-id! (make-id 1 1))
+
+  ;; Set (*special-cells* 1) to '(id 1 1)
+  ;; Top left visible cell
   (set-screen-corner-cell-id! (make-id 1 1))
+
+  ;; Process commands in loop or quit
   (command-loop))
 
 (define (command-loop)
+
+  ;; Display spreadsheet
   (print-screen)
+
+  ;; Quit or process command
+  ;; Commands are stored in *the-commands* list
   (let ((command-or-formula (read)))
     (if (equal? command-or-formula 'exit)
         "Bye!"
         (begin (process-command command-or-formula)
                (command-loop)))))
 
+;; Process command or formula
 (define (process-command command-or-formula)
   (cond
     ((and (list? command-or-formula)
           (command? (car command-or-formula)))
-     (execute-command command-or-formula))
+     (execute-command command-or-formula)) ;; list - (f 3)
     ((command? command-or-formula)
-     (execute-command (list command-or-formula 1)))
-    (else (exhibit
+     (execute-command (list command-or-formula 1))) ;; word - f
+    (else (exhibit ;; formula
             (ss-eval
               (pin-down command-or-formula
                         (selection-cell-id)))))))
 
+;; Apply command, for example next-row to arguments
 (define (execute-command command)
   (apply (get-command (car command))
          (cdr command)))
 
+;; Show value and continue
 (define (exhibit val)
   (show val)
   (show "Type RETURN to redraw screen")
@@ -79,11 +119,15 @@
 
 (define (select-id! id)
   (set-selection-cell-id! id)
+
+  ;; If newly selected cell is outside
+  ;; screenset new corner cell
   (adjust-screen-boundaries))
 
 (define (select cell-name)
   (select-id! (cell-name->id cell-name)))
 
+;; Set new corner cell if necessary
 (define (adjust-screen-boundaries)
   (let ((row (id-row (selection-cell-id)))
         (col (id-column (selection-cell-id))))
@@ -111,11 +155,13 @@
 
 ;; LOAD
 
+;; Open file
 (define (spreadsheet-load filename)
   (let ((port (open-input-file filename)))
     (sl-helper port)
     (close-input-port port)))
 
+;; Read, show and process commands from file
 (define (sl-helper port)
   (let ((command (read port)))
     (if (eof-object? command)
@@ -129,14 +175,24 @@
 
 (define (put formula . where)
   (cond
+
+    ;; Currently selected cell
     ((null? where)
      (put-formula-in-cell formula (selection-cell-id)))
+
+    ;; Cell whose name was passed as an argument.
     ((cell-name? (car where))
       (put-formula-in-cell formula (cell-name->id (car where))))
+
+    ;; Row
     ((number? (car where))
       (put-all-cells-in-row formula (car where)))
+
+    ;; Column
     ((letter? (car where))
       (put-all-cells-in-col formula (letter->number (car where))))
+
+    ;; Error
     (else (error "Put it where?"))))
 
 (define (put-all-cells-in-row formula row)
@@ -162,9 +218,11 @@
 
 ;;; The Association List of Commands
 
+;; Check if it is command name
 (define (command? name)
   (assoc name *the-commands*))
 
+;; Get command, for example 'n -> next-row
 (define (get-command name)
   (let ((result (assoc name *the-commands*)))
     (if (not result)
@@ -232,9 +290,6 @@
     ((equal? (first new) '>) (+ old (bf new)))
     ((equal? (first new) '<) (- old (bf new)))
     (else (error "What row?"))))
-
-
-; HERE HERE HERE HERE
 
 ;;; Dependency Management
 
@@ -347,18 +402,33 @@
 ;;; Printing the Screen
 
 (define (print-screen)
+
+  ;; Print 3 newlines above spreadsheet
   (newline)
   (newline)
   (newline)
+
+  ;; Pass visible cell column id to show-column-labels
+  ;; function and show all labels
   (show-column-labels (id-column (screen-corner-cell-id)))
+
+  ;; Display rows starting from corner cell
   (show-rows 20
     (id-column (screen-corner-cell-id))
     (id-row (screen-corner-cell-id)))
+
+  ;; Display selected cell name at the botoom
   (display-cell-name (selection-cell-id))
   (display ":  ")
+
+  ;; Selected cell value
   (show (cell-value (selection-cell-id)))
+
+  ;; Show expression value from selected cell
   (display-expression (cell-expr (selection-cell-id)))
   (newline)
+
+  ;; Display prompt
   (display "?? "))
 
 (define (display-cell-name id)
@@ -366,42 +436,71 @@
   (display (id-row id)))
 
 (define (show-column-labels col-number)
+
+  ;; Blank before column labels
   (display "  ")
+
+  ;; Display labels
   (show-label 6 col-number)
+
+  ;; End displaying labels with newline
   (newline))
 
+;; Display all labels
 (define (show-label to-go this-col-number)
   (cond
     ((= to-go 0) '())
     (else
+
       (display "  -----")
+
+      ;; Column letter
       (display (number->letter this-col-number))
+
       (display "----")
+
+      ;; Recursive call
       (show-label (- to-go 1) (+ 1 this-col-number)))))
 
+
+;; Show all rows
 (define (show-rows to-go col row)
   (cond
     ((= to-go 0) 'done)
     (else
+
+      ;; Align row
       (display (align row 2 0))
       (display " ")
+
+      ;; Display 1 row
       (show-row 6 col row)
       (newline)
+
+      ;; Display remaining rows
       (show-rows (- to-go 1) col (+ row 1)))))
 
 (define (show-row to-go col row)
   (cond
     ((= to-go 0) 'done)
     (else
+
+      ;; Display selection symbol
       (display (if (selected-indices? col row) ">" " "))
+
+      ;; Display cell value
       (display-value (cell-value-from-indices col row))
+
+      ;; Ending selection symbol
       (display (if (selected-indices? col row) "<" " "))
       (show-row (- to-go 1) (+ 1 col) row))))
 
+;; Check if this cell is selected
 (define (selected-indices? col row)
   (and (= col (id-column (selection-cell-id)))
        (= row (id-row (selection-cell-id)))))
 
+;; Display aligned value
 (define (display-value val)
   (display (align (if (null? val) "" val) 10 2)))
 
@@ -441,7 +540,6 @@
 
 (define (set-screen-corner-cell-id! new-id)
   (vector-set! *special-cells* 1 new-id))
-
 
 ;; Cell names
 
@@ -508,6 +606,7 @@
 (define (set-cell-children! id val)
   (vector-set! (cell-structure id) 3 val))
 
+;; Get selected cell
 (define (cell-structure id)
   (global-array-lookup (id-column id)
                        (id-row id)))
