@@ -8,6 +8,7 @@
 ;; They are selected by columns and rows
 ;; Cell id is list, e.g. (id 3 5)
 ;; Cell is vector of length 4
+;; (value expression cells-it-depends-on cells-that-depend-on-it)
 
 ;; Navigation Commands
 ;; Up - p
@@ -201,13 +202,18 @@
 (define (put-all-cells-in-col formula col)
   (put-all-helper formula (lambda (row) (make-id col row)) 1 total-rows))
 
+;; Put formula in row or col
 (define (put-all-helper formula id-maker this max)
   (if (> this max)
       'done
+      ;; Function id-maker has col or row index captured inside
+      ;; Second value is passed as parameter this starting with row/col 1
       (begin (try-putting formula (id-maker this))
+             ;; Increment row or col value
              (put-all-helper formula id-maker (+ 1 this) max))))
 
 (define (try-putting formula id)
+  ;; Put formula in empty cell
   (if (or (null? (cell-value id)) (null? formula))
       (put-formula-in-cell formula id)
       'do-nothing))
@@ -241,54 +247,96 @@
 
 ;;; Pinning Down Formulas Into Expressions
 
+;; Modify formula to contain absolute cell values
 (define (pin-down formula id)
   (cond
+
+    ;; Convert cell name to id
     ((cell-name? formula) (cell-name->id formula))
+
+    ;; Leave word unmodified
     ((word? formula) formula)
+
+    ;; Empty list for null
     ((null? formula) '())
+
+    ;; Pin down cell values
     ((equal? (car formula) 'cell)
      (pin-down-cell (cdr formula) id))
+
+    ;; Recursively pin-down subformulas and check bounds
     (else
       (bound-check
         (map (lambda (subformula) (pin-down subformula id)) formula)))))
 
+;; Check if any of subformulas is out of bounds
 (define (bound-check form)
   (if (member 'out-of-bounds form)
       'out-of-bounds
       form))
 
+;; Set absolute cell address values
 (define (pin-down-cell args reference-id)
   (cond
+
+    ;; Error (no cell arguments)
     ((null? args) (error "Bad cell specification: (cell)"))
+
+    ;; Only row (number) or col (letter)
     ((null? (cdr args))
-     (cond ((number? (car args))         ; they chose a row
-            (make-id (id-column reference-id) (car args)))
-           ((letter? (car args))         ; they chose a column
-            (make-id (letter->number (car args))
+     (cond ((number? (car args))
+            (make-id (id-column reference-id) (car args))) ;; Row
+           ((letter? (car args))
+            (make-id (letter->number (car args)) ;; Col
                      (id-row reference-id)))
            (else
-            (error "Bad cell specification:" (cons 'cell args)))))
+            (error "Bad cell specification:" (cons 'cell args))))) ;; Error
+
+    ;; Select specific cell (col and row)
     (else
+
+      ;; Col and row can be shifted with > and < symbols
+      ;; Use function pin-down-col and pin-down-row to find final values
       (let ((col (pin-down-col (car args) (id-column reference-id)))
             (row (pin-down-row (cadr args) (id-row reference-id))))
+
+        ;; Check if values are in bounds
         (if (and (>= col 1) (<= col total-cols) (>= row 1) (<= row total-rows))
             (make-id col row)
             'out-of-bounds)))))
 
+;; Find target column
 (define (pin-down-col new old)
   (cond
+
+    ;; Same column
     ((equal? new '*) old)
+
+    ;; Shift right or left by some number of columns
     ((equal? (first new) '>) (+ old (bf new)))
     ((equal? (first new) '<) (- old (bf new)))
+
+    ;; Exact column
     ((letter? new) (letter->number new))
+
+    ;; Column error
     (else (error "What column?"))))
 
+;; Find target row
 (define (pin-down-row new old)
   (cond
+
+    ;; Exact row
     ((number? new) new)
+
+    ;; Same column
     ((equal? new '*) old)
+
+    ;; Shift down or up by some number of rows
     ((equal? (first new) '>) (+ old (bf new)))
     ((equal? (first new) '<) (- old (bf new)))
+
+    ;; Row error
     (else (error "What row?"))))
 
 ;;; Dependency Management
@@ -364,6 +412,7 @@
 (define (invocation? expr)
   (list? expr))
 
+;; Get function, for example 'tan -> tan
 (define (get-function name)
   (let ((result (assoc name *the-functions*)))
     (if (not result)
