@@ -15,6 +15,7 @@
 ;; Down - n
 ;; Left - b
 ;; Right - f
+;; Select cell x - (select x)
 
 ;; Data commands (put value cell)
 ;; Set selected cell to 8 (put 8)
@@ -34,12 +35,12 @@
 
   ;; Vector *special-cells* size is 2
 
-  ;; Set (*special-cells* 0) to '(id 1 1)
   ;; Selected cell
+  ;; Set (*special-cells* 0) to '(id 1 1)
   (set-selection-cell-id! (make-id 1 1))
 
-  ;; Set (*special-cells* 1) to '(id 1 1)
   ;; Top left visible cell
+  ;; Set (*special-cells* 1) to '(id 1 1)
   (set-screen-corner-cell-id! (make-id 1 1))
 
   ;; Process commands in loop or quit
@@ -62,11 +63,11 @@
 (define (process-command command-or-formula)
   (cond
     ((and (list? command-or-formula)
-          (command? (car command-or-formula)))
+          (command? (car command-or-formula))) ;; Is the first element a command?
      (execute-command command-or-formula)) ;; list - (f 3)
-    ((command? command-or-formula)
+    ((command? command-or-formula) ;; Is the entire element a command?
      (execute-command (list command-or-formula 1))) ;; word - f
-    (else (exhibit ;; formula
+    (else (exhibit ;; formula, for example (* b4 a2)
             (ss-eval
               (pin-down command-or-formula
                         (selection-cell-id)))))))
@@ -174,14 +175,17 @@
 
 ;; PUT
 
-(define (put formula . where)
+(define (put formula . where) ;; optional argument
   (cond
 
     ;; Currently selected cell
+    ;; Parameter where is empty list
     ((null? where)
      (put-formula-in-cell formula (selection-cell-id)))
 
-    ;; Cell whose name was passed as an argument.
+    ;; Cell whose name was passed as an argument
+    ;; Parameter where is non-empty list
+    ;; Its first element is cell name
     ((cell-name? (car where))
       (put-formula-in-cell formula (cell-name->id (car where))))
 
@@ -212,8 +216,9 @@
              ;; Increment row or col value
              (put-all-helper formula id-maker (+ 1 this) max))))
 
+;; Put formula in empty cell
+;; Don't modify other cells
 (define (try-putting formula id)
-  ;; Put formula in empty cell
   (if (or (null? (cell-value id)) (null? formula))
       (put-formula-in-cell formula id)
       'do-nothing))
@@ -603,6 +608,7 @@
 (define (cell-name-row cell-name)
   (bf cell-name))
 
+;; For example translate 'b4 -> '(id 2 4)
 (define (cell-name->id cell-name)
   (make-id (cell-name-column cell-name)
            (cell-name-row cell-name)))
@@ -611,6 +617,9 @@
 
 (define (make-id col row)
   (list 'id col row))
+
+
+;; Id selectors
 
 (define (id-column id)
   (cadr id))
@@ -627,6 +636,9 @@
 
 (define (make-cell)
   (vector '() '() '() '()))
+
+
+;; Cell selectors and mutators
 
 (define (cell-value id)
   (vector-ref (cell-structure id) 0))
@@ -663,32 +675,42 @@
 (define (cell-structure-from-indices col row)
   (global-array-lookup col row))
 
+
+;; Main array
 (define *the-spreadsheet-array* (make-vector total-rows))
 
+;; Get valid cell at col-row
 (define (global-array-lookup col row)
   (if (and (<= row total-rows) (<= col total-cols))
+
+      ;; Indices start at 0
       (vector-ref
         (vector-ref *the-spreadsheet-array* (- row 1))
         (- col 1))
+
       (error "Out of bounds")))
 
+;; Initialize all rows
 (define (init-array)
-  (fill-array-with-rows 29))
+  (fill-array-with-rows (- total-rows 1)))
 
+;; Create rows
 (define (fill-array-with-rows n)
   (if (< n 0)
       'done
       (begin
         (vector-set! *the-spreadsheet-array* n (make-vector total-cols))
         (fill-row-with-cells
-          (vector-ref *the-spreadsheet-array* n) 25)
+          (vector-ref *the-spreadsheet-array* n) (- total-cols 1))
         (fill-array-with-rows (- n 1)))))
 
+
+;; Create cells in row
 (define (fill-row-with-cells vec n)
   (if (< n 0)
       'done
       (begin
-        (vector-set! vec n (make-cell))
+        (vector-set! vec n (make-cell)) ;; create single cell
         (fill-row-with-cells vec (- n 1)))))
 
 ;;; Utility Functions
