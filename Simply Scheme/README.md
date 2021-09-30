@@ -1,9 +1,5 @@
 # Simply Scheme
 
-Exercises from book "Simply Scheme: Introducing Computer Science"
-
-## Table of Contents
-
 1. [Introduction: Functions](Part%20I)
 2. [Composition of Functions](Part%20II)
 3. [Functions as Data](Part%20III)

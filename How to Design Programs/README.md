@@ -1,27 +1,9 @@
 # How to Design Programs
 
-Exercises from book "How to Design Programs"
-
-* Savannah Tree
-
-![Savannah](https://i.imgur.com/MJFOT5g.png)
-
-* Tetris
-
-![Tetris](https://i.imgur.com/56zoefw.png)
-
-* Snake
-
-![Snake](https://i.imgur.com/wjEdQpt.png)
-
-* Cannibals
-
-![Cannibals](https://i.imgur.com/hnpaqag.png)
-
-* Sierpinski Triangle
-
-![Sierpinski](https://i.imgur.com/Td7TqKA.png)
-
-* Bezier Curve
-
-![Bezier](https://i.imgur.com/Yk8oajA.png)
+1. [Part I: Fixed-Size Data](Part%201)
+2. [Part II: Arbitrarily Large Data](Part%202)
+3. [Part III: Scope and Abstraction](Part%203)
+4. [Part IV: Intertwined Data](Part%204)
+5. [Part V: Generative Recursion](Part%205)
+6. [Part VI: Accumulators](Part%206)
+7. [Intermezzos](Intermezzos)
