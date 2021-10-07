@@ -24,8 +24,9 @@
 ;; Set all col d to 6 - (put 6 d)
 ;; Non-empty cell values arent modified during row/cell assignments
 
+;; Solution of exercise 1
 (define total-cols 26)
-(define total-rows 30)
+(define total-rows 30) ;; Works with value 40
 
 ;; Main function
 (define (spreadsheet)
@@ -223,6 +224,7 @@
       (put-formula-in-cell formula id)
       'do-nothing))
 
+;; Pin down formula and put it in cell
 (define (put-formula-in-cell formula id)
   (put-expr (pin-down formula id) id))
 
@@ -253,6 +255,8 @@
 ;;; Pinning Down Formulas Into Expressions
 
 ;; Modify formula to contain absolute cell values
+;; Parameter id is reference cell
+;; For example (pin-down '(* (cell b) (cell c)) 'd4) -> (* (id 2 4) (id 3 4))
 (define (pin-down formula id)
   (cond
 
@@ -346,39 +350,68 @@
 
 ;;; Dependency Management
 
+;; Put pinned down formula (now expression) in cell
 (define (put-expr expr-or-out-of-bounds id)
+
+  ;; Set expression value
   (let ((expr (if (equal? expr-or-out-of-bounds 'out-of-bounds)
                   '()
                   expr-or-out-of-bounds)))
+
+    ;; Remove current cell id from parent cells
     (for-each (lambda (old-parent)
                 (set-cell-children!
                   old-parent
                   (remove id (cell-children old-parent))))
               (cell-parents id))
+
+    ;; Set current cell expression
     (set-cell-expr! id expr)
+
+    ;; Set parent ids in current cell
+    ;; Function extract-ids returns all cell ids from expression
     (set-cell-parents! id (remdup (extract-ids expr)))
+
+    ;; Add this cell id to its new parents children lists
     (for-each (lambda (new-parent)
                 (set-cell-children!
                   new-parent
                   (cons id (cell-children new-parent))))
               (cell-parents id))
+
+    ;; Expression may or may not compute a new value for this cell
     (figure id)))
 
+;; Get ids from expression and ignore other values
 (define (extract-ids expr)
   (cond
+
+    ;; Base cases
     ((id? expr) (list expr))
     ((word? expr) '())
     ((null? expr) '())
+
+    ;; Recursive step for compound expressions
     (else (append (extract-ids (car expr))
                   (extract-ids (cdr expr))))))
 
+
 (define (figure id)
   (cond
+
+    ;; Clear cell for empty expression
     ((null? (cell-expr id)) (setvalue id '()))
+
+    ;; Compute and save new value if all
+    ;; parents already have numerical values
     ((all-evaluated? (cell-parents id))
-    (setvalue id (ss-eval (cell-expr id))))
+     (setvalue id (ss-eval (cell-expr id))))
+
+    ;; If any parent doesn't have
+    ;; numerical value clear this cell
     (else (setvalue id '()))))
 
+;; Check whether all cells have numerical values
 (define (all-evaluated? ids)
   (cond
     ((null? ids) #t)
@@ -386,8 +419,12 @@
     (else (all-evaluated? (cdr ids)))))
 
 (define (setvalue id value)
+
+  ;; Remember old value and set the new one
   (let ((old (cell-value id)))
     (set-cell-value! id value)
+
+    ;; If value changed all children must be figured
     (if (not (equal? old value))
         (for-each figure (cell-children id))
         'do-nothing)))
@@ -675,35 +712,41 @@
 (define (cell-structure-from-indices col row)
   (global-array-lookup col row))
 
-
 ;; Main array
-(define *the-spreadsheet-array* (make-vector total-rows))
+(define *the-spreadsheet-array* (make-vector (* total-rows total-cols)))
 
 ;; Get valid cell at col-row
 (define (global-array-lookup col row)
   (if (and (<= row total-rows) (<= col total-cols))
-
-      ;; Indices start at 0
-      (vector-ref
-        (vector-ref *the-spreadsheet-array* (- row 1))
-        (- col 1))
-
+      (vector-ref *the-spreadsheet-array* (- (+ (* (- row 1) total-cols) col) 1))
       (error "Out of bounds")))
 
-;; Initialize all rows
+;; Get cell (old version)
+;; (define (global-array-lookup col row)
+;;   (if (and (<= row total-rows) (<= col total-cols))
+;;       ;; Indices start at 0
+;;       (vector-ref
+;;         (vector-ref *the-spreadsheet-array* (- row 1))
+;;         (- col 1))
+;;       (error "Out of bounds")))
+
+;; Initialize array (old version)
+;; (define (init-array)
+;;   (fill-array-with-rows (- total-rows 1)))
+
+;; Initialize all cells
 (define (init-array)
-  (fill-array-with-rows (- total-rows 1)))
+  (fill-row-with-cells *the-spreadsheet-array* (- (* total-cols total-rows) 1)))
 
-;; Create rows
-(define (fill-array-with-rows n)
-  (if (< n 0)
-      'done
-      (begin
-        (vector-set! *the-spreadsheet-array* n (make-vector total-cols))
-        (fill-row-with-cells
-          (vector-ref *the-spreadsheet-array* n) (- total-cols 1))
-        (fill-array-with-rows (- n 1)))))
-
+;; Create rows (old version)
+;;(define (fill-array-with-rows n)
+;;  (if (< n 0)
+;;      'done
+;;      (begin
+;;        (vector-set! *the-spreadsheet-array* n (make-vector total-cols))
+;;        (fill-row-with-cells
+;;          (vector-ref *the-spreadsheet-array* n) (- total-cols 1))
+;;        (fill-array-with-rows (- n 1)))))
 
 ;; Create cells in row
 (define (fill-row-with-cells vec n)

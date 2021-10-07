@@ -2,6 +2,8 @@
 
 #lang racket
 
-;; Add digit prefix to column symbol
+;; Columns could be labelled with double letters
+;; It is necessary to modify the cell-name-column
+;; function so that it takes more than 1 column character.
 
 #t
