@@ -432,14 +432,24 @@
 
 ;;; Evaluating Expressions
 
+;; Evaluate expression
 (define (ss-eval expr)
   (cond
+
+    ;; Don't modify numbers
     ((number? expr) expr)
+
+    ;; Get quoted expression value
     ((quoted? expr) (quoted-value expr))
+
+    ;; Get cell value
     ((id? expr) (cell-value expr))
+
+    ;; Apply function to recursively evaluated arguments
     ((invocation? expr)
      (apply (get-function (car expr))
             (map ss-eval (cdr expr))))
+
     (else (error "Invalid expression:" expr))))
 
 (define (quoted? expr)
@@ -595,6 +605,7 @@
 (define (display-value val)
   (display (align (if (null? val) "" val) 10 2)))
 
+;; Display cell names instead of ids
 (define (display-expression expr)
   (cond
     ((null? expr) (display '()))
@@ -604,6 +615,7 @@
      (display-cell-name expr))
     (else (display-invocation expr))))
 
+;; Display expression and subexpressions
 (define (display-invocation expr)
   (display "(")
   (display-expression (car expr))
