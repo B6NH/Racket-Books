@@ -85,6 +85,8 @@
   (read-line)
   (read-line))
 
+(define (window cell-name)
+  (set-screen-corner-cell-id! (cell-name->id cell-name)))
 
 ;;; Commands
 
@@ -177,29 +179,36 @@
 ;; PUT
 
 (define (put formula . where) ;; optional argument
-  (cond
+ (begin
+   (cond
 
-    ;; Currently selected cell
-    ;; Parameter where is empty list
-    ((null? where)
-     (put-formula-in-cell formula (selection-cell-id)))
+      ;; Currently selected cell
+      ;; Parameter where is empty list
+      ((null? where)
+      (put-formula-in-cell formula (selection-cell-id)))
 
-    ;; Cell whose name was passed as an argument
-    ;; Parameter where is non-empty list
-    ;; Its first element is cell name
-    ((cell-name? (car where))
-      (put-formula-in-cell formula (cell-name->id (car where))))
+      ;; Cell whose name was passed as an argument
+      ;; Parameter where is non-empty list
+      ;; Its first element is cell name
+      ((cell-name? (car where))
+        (put-formula-in-cell formula (cell-name->id (car where))))
 
-    ;; Row
-    ((number? (car where))
-      (put-all-cells-in-row formula (car where)))
+      ;; Row
+      ((number? (car where))
+        (put-all-cells-in-row formula (car where)))
 
-    ;; Column
-    ((letter? (car where))
-      (put-all-cells-in-col formula (letter->number (car where))))
+      ;; Column
+      ((letter? (car where))
+        (put-all-cells-in-col formula (letter->number (car where))))
 
-    ;; Error
-    (else (error "Put it where?"))))
+      ;; Error
+      (else (error "Put it where?")))
+
+   ;; Show number of modified cells
+   (show-line (se *modified-cells* "cells modified"))
+
+   ;; Reset modified cells counter
+   (set! *modified-cells* 0)))
 
 (define (put-all-cells-in-row formula row)
   (put-all-helper formula (lambda (col) (make-id col row)) 1 total-cols))
@@ -249,6 +258,7 @@
         (list 'f next-col)
         (list 'select select)
         (list 'put put)
+        (list 'window window)
         (list 'load spreadsheet-load)))
 
 
@@ -665,21 +675,19 @@
 ;; Cell IDs
 
 (define (make-id col row)
-  (list 'id col row))
-
+  (vector col row))
 
 ;; Id selectors
 
 (define (id-column id)
-  (cadr id))
+  (vector-ref id 0))
 
 (define (id-row id)
-  (caddr id))
+  (vector-ref id 1))
 
 (define (id? x)
-  (and (list? x)
-       (not (null? x))
-       (equal? 'id (car x))))
+  (and (vector? x)
+       (= (vector-length x) 2)))
 
 ;; Cells
 
@@ -705,7 +713,9 @@
   (vector-ref (cell-structure id) 3))
 
 (define (set-cell-value! id val)
-  (vector-set! (cell-structure id) 0 val))
+  (begin
+    (vector-set! (cell-structure id) 0 val)
+    (set! *modified-cells* (+ *modified-cells* 1))))
 
 (define (set-cell-expr! id val)
   (vector-set! (cell-structure id) 1 val))
@@ -726,6 +736,8 @@
 
 ;; Main array
 (define *the-spreadsheet-array* (make-vector (* total-rows total-cols)))
+
+(define *modified-cells* 0)
 
 ;; Get valid cell at col-row
 (define (global-array-lookup col row)
