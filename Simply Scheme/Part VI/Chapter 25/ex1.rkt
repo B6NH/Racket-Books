@@ -88,6 +88,12 @@
 (define (window cell-name)
   (set-screen-corner-cell-id! (cell-name->id cell-name)))
 
+(define (set-precision column precision)
+  (vector-set! *column-precisions* (- (letter->number column) 1) precision))
+
+(define (set-width column width)
+  (vector-set! *column-widths* (- (letter->number column) 1) width))
+
 ;;; Commands
 
 ;; Cell selection commands: F, B, N, P, and SELECT
@@ -259,8 +265,9 @@
         (list 'select select)
         (list 'put put)
         (list 'window window)
+        (list 'set-precision set-precision)
+        (list 'set-width set-width)
         (list 'load spreadsheet-load)))
-
 
 ;;; Pinning Down Formulas Into Expressions
 
@@ -282,6 +289,9 @@
     ;; Pin down cell values
     ((equal? (car formula) 'cell)
      (pin-down-cell (cdr formula) id))
+
+    ((equal? (car formula) 'accumulate)
+     (accumulate-cells (cdr formula)))
 
     ;; Recursively pin-down subformulas and check bounds
     (else
@@ -595,16 +605,19 @@
   (cond
     ((= to-go 0) 'done)
     (else
+      (let ((col-index (- col 1)))
 
-      ;; Display selection symbol
-      (display (if (selected-indices? col row) ">" " "))
+        ;; Display selection symbol
+        (display (if (selected-indices? col row) ">" " "))
 
-      ;; Display cell value
-      (display-value (cell-value-from-indices col row))
+        ;; Display cell value
+        (display-value (cell-value-from-indices col row)
+                       (vector-ref *column-precisions* col-index)
+                       (vector-ref *column-widths* col-index))
 
-      ;; Ending selection symbol
-      (display (if (selected-indices? col row) "<" " "))
-      (show-row (- to-go 1) (+ 1 col) row))))
+        ;; Ending selection symbol
+        (display (if (selected-indices? col row) "<" " "))
+        (show-row (- to-go 1) (+ 1 col) row)))))
 
 ;; Check if this cell is selected
 (define (selected-indices? col row)
@@ -612,8 +625,8 @@
        (= row (id-row (selection-cell-id)))))
 
 ;; Display aligned value
-(define (display-value val)
-  (display (align (if (null? val) "" val) 10 2)))
+(define (display-value val precision width)
+  (display (align (if (null? val) "" val) width precision)))
 
 ;; Display cell names instead of ids
 (define (display-expression expr)
@@ -739,6 +752,10 @@
 
 (define *modified-cells* 0)
 
+(define *column-precisions* (make-vector total-cols 2))
+
+(define *column-widths* (make-vector total-cols 10))
+
 ;; Get valid cell at col-row
 (define (global-array-lookup col row)
   (if (and (<= row total-rows) (<= col total-cols))
@@ -815,6 +832,28 @@
 (define (remove bad-item lst)
   (filter (lambda (item) (not (equal? item bad-item)))
            lst))
+
+;;; Accumulate
+
+(define (accumulate-cells cells)
+  (let ((symbol (car cells))
+        (start-col (first (cadr cells)))
+        (end-col (first (caddr cells)))
+        (start-row (last (cadr cells)))
+        (end-row (last (caddr cells))))
+    (cons symbol (expand-rows (letter->number start-col) (letter->number end-col) start-row end-row))))
+
+(define (expand-rows start-column-index end-column-index current-row end-row)
+  (if (> current-row end-row)
+      '()
+      (append (expand-row current-row start-column-index end-column-index)
+              (expand-rows start-column-index end-column-index (+ current-row 1) end-row))))
+
+(define (expand-row row-number current-column-index end-column-index)
+  (if (> current-column-index end-column-index)
+      '()
+      (cons (vector current-column-index row-number)
+            (expand-row row-number (+ current-column-index 1) end-column-index))))
 
 ; -------------------------------------------------------------------
 
