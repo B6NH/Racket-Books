@@ -10,6 +10,8 @@
 ;; Cell is vector of length 4
 ;; (value expression cells-it-depends-on cells-that-depend-on-it)
 
+; -------------------------------------------------------------------
+
 ;; Navigation Commands
 ;; Up - p
 ;; Down - n
@@ -18,11 +20,19 @@
 ;; Select cell x - (select x)
 
 ;; Data commands (put value cell)
-;; Set selected cell to 8 (put 8)
+;; Set selected cell value to 8 - (put 8)
 ;; Set a6 to 5 - (put 5 a6)
 ;; Set all row 10 to 3 - (put 3 10)
 ;; Set all col d to 6 - (put 6 d)
 ;; Non-empty cell values arent modified during row/cell assignments
+
+;; Other commands
+;; Select top-left window cell - (window c4)
+;; Set column f precision to 6 - (set-precision f 6)
+;; Set column d width to 4 - (set-width d 4)
+;; Undo last action - undo
+
+; -------------------------------------------------------------------
 
 ;; Solution of exercise 1
 (define total-cols 26)
@@ -86,41 +96,78 @@
   (read-line))
 
 (define (window cell-name)
-  (set-screen-corner-cell-id! (cell-name->id cell-name)))
+  (begin
+    (set! *history*
+      (cons (list 'set-screen-corner-cell-id!
+                   (screen-corner-cell-id))
+            *history*))
+    (set-screen-corner-cell-id! (cell-name->id cell-name))))
+
+(define (set-prec-width column prec-width vec)
+  (let ((indx (- (letter->number column) 1)))
+    (begin
+      (set! *history*
+        (cons (list 'vector-set! vec indx (vector-ref vec indx))
+              *history*))
+      (vector-set! vec indx prec-width))))
 
 (define (set-precision column precision)
-  (vector-set! *column-precisions* (- (letter->number column) 1) precision))
+  (set-prec-width column precision *column-precisions*))
 
 (define (set-width column width)
-  (vector-set! *column-widths* (- (letter->number column) 1) width))
+  (set-prec-width column width *column-widths*))
+
+(define (undo p)
+  (if (null? *history*)
+      'done
+      (begin
+        (apply (get-private-function (caar *history*)) (cdar *history*))
+        (set! *history* (cdr *history*)))))
 
 ;;; Commands
 
 ;; Cell selection commands: F, B, N, P, and SELECT
 
+(define (save-row-col f rc)
+  (set! *history* (cons (list f rc) *history*)))
+
+(define (save-row row)
+  (save-row-col 'set-selected-row! row))
+
+(define (save-col col)
+  (save-row-col 'set-selected-column! col))
+
 (define (prev-row delta)
   (let ((row (id-row (selection-cell-id))))
     (if (< (- row delta) 1)
         (error "Already at top.")
-        (set-selected-row! (- row delta)))))
+        (begin
+          (save-row row)
+          (set-selected-row! (- row delta))))))
 
 (define (next-row delta)
   (let ((row (id-row (selection-cell-id))))
     (if (> (+ row delta) total-rows)
         (error "Already at bottom.")
-        (set-selected-row! (+ row delta)))))
+        (begin
+          (save-row row)
+          (set-selected-row! (+ row delta))))))
 
 (define (prev-col delta)
   (let ((col (id-column (selection-cell-id))))
     (if (< (- col delta) 1)
         (error "Already at left.")
-        (set-selected-column! (- col delta)))))
+        (begin
+          (save-col col)
+          (set-selected-column! (- col delta))))))
 
 (define (next-col delta)
   (let ((col (id-column (selection-cell-id))))
     (if (> (+ col delta) total-cols)
         (error "Already at right.")
-        (set-selected-column! (+ col delta)))))
+        (begin
+          (save-col col)
+          (set-selected-column! (+ col delta))))))
 
 (define (set-selected-row! new-row)
   (select-id! (make-id (id-column (selection-cell-id)) new-row)))
@@ -136,7 +183,9 @@
   (adjust-screen-boundaries))
 
 (define (select cell-name)
-  (select-id! (cell-name->id cell-name)))
+  (begin
+    (set! *history* (cons (list 'select-id! (selection-cell-id)) *history*))
+    (select-id! (cell-name->id cell-name))))
 
 ;; Set new corner cell if necessary
 (define (adjust-screen-boundaries)
@@ -267,6 +316,7 @@
         (list 'window window)
         (list 'set-precision set-precision)
         (list 'set-width set-width)
+        (list 'undo undo)
         (list 'load spreadsheet-load)))
 
 ;;; Pinning Down Formulas Into Expressions
@@ -484,6 +534,9 @@
 (define (invocation? expr)
   (list? expr))
 
+(define (get-private-function name)
+  (cadr (assoc name *private-functions*)))
+
 ;; Get function, for example 'tan -> tan
 (define (get-function name)
   (let ((result (assoc name *the-functions*)))
@@ -667,6 +720,14 @@
 (define (set-screen-corner-cell-id! new-id)
   (vector-set! *special-cells* 1 new-id))
 
+(define *private-functions*
+  (list
+    (list 'set-selected-row! set-selected-row!)
+    (list 'set-selected-column! set-selected-column!)
+    (list 'select-id! select-id!)
+    (list 'vector-set! vector-set!)
+    (list 'set-screen-corner-cell-id! set-screen-corner-cell-id!)))
+
 ;; Cell names
 
 (define (cell-name? expr)
@@ -755,6 +816,8 @@
 (define *column-precisions* (make-vector total-cols 2))
 
 (define *column-widths* (make-vector total-cols 10))
+
+(define *history* '())
 
 ;; Get valid cell at col-row
 (define (global-array-lookup col row)
