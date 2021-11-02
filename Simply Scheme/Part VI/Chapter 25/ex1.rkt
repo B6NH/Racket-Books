@@ -231,6 +231,35 @@
                (sl-helper port)))))
 
 
+(define (save-put id val)
+  (set! *history*
+    (cons (list 'put-expr
+                (cell-expr id)
+                 id)
+          *history*))
+  (put-formula-in-cell val id))
+
+(define (save-affected index indices fn)
+  (if (empty? indices)
+      'done
+      (set! *history*
+        (cons (list fn index indices)
+              *history*))))
+
+(define (clear-in-row row col-nums)
+  (if (empty? col-nums)
+      'done
+      (begin
+        (put-expr '() (vector (car col-nums) row))
+        (clear-in-row row (cdr col-nums)))))
+
+(define (clear-in-col col row-nums)
+  (if (empty? row-nums)
+      'done
+      (begin
+        (put-expr '() (vector col (car row-nums)))
+        (clear-in-col col (cdr row-nums)))))
+
 ;; PUT
 
 (define (put formula . where) ;; optional argument
@@ -240,21 +269,24 @@
       ;; Currently selected cell
       ;; Parameter where is empty list
       ((null? where)
-      (put-formula-in-cell formula (selection-cell-id)))
+       (save-put (selection-cell-id) formula))
 
       ;; Cell whose name was passed as an argument
       ;; Parameter where is non-empty list
       ;; Its first element is cell name
       ((cell-name? (car where))
-        (put-formula-in-cell formula (cell-name->id (car where))))
+       (let ((cid (cell-name->id (car where))))
+         (save-put cid formula)))
 
       ;; Row
       ((number? (car where))
-        (put-all-cells-in-row formula (car where)))
+       (let ((cw (car where)))
+         (save-affected cw (put-all-cells-in-row formula cw) 'clear-in-row)))
 
       ;; Column
       ((letter? (car where))
-        (put-all-cells-in-col formula (letter->number (car where))))
+       (let ((indx (letter->number (car where))))
+         (save-affected indx (put-all-cells-in-col formula indx) 'clear-in-col)))
 
       ;; Error
       (else (error "Put it where?")))
@@ -266,27 +298,30 @@
    (set! *modified-cells* 0)))
 
 (define (put-all-cells-in-row formula row)
-  (put-all-helper formula (lambda (col) (make-id col row)) 1 total-cols))
+  (put-all-helper formula (lambda (col) (make-id col row)) 1 total-cols '()))
 
 (define (put-all-cells-in-col formula col)
-  (put-all-helper formula (lambda (row) (make-id col row)) 1 total-rows))
+  (put-all-helper formula (lambda (row) (make-id col row)) 1 total-rows '()))
 
 ;; Put formula in row or col
-(define (put-all-helper formula id-maker this max)
+(define (put-all-helper formula id-maker this max acc)
   (if (> this max)
-      'done
+      acc
       ;; Function id-maker has col or row index captured inside
-      ;; Second value is passed as parameter this starting with row/col 1
-      (begin (try-putting formula (id-maker this))
-             ;; Increment row or col value
-             (put-all-helper formula id-maker (+ 1 this) max))))
+      ;; Second value is passed as parameter 'this' starting with row/col 1
+      ;; Increment row or col value
+      (put-all-helper
+        formula id-maker (+ 1 this) max
+        (if (try-putting formula (id-maker this))
+            (cons this acc)
+            acc))))
 
 ;; Put formula in empty cell
 ;; Don't modify other cells
 (define (try-putting formula id)
   (if (or (null? (cell-value id)) (null? formula))
       (put-formula-in-cell formula id)
-      'do-nothing))
+      #false))
 
 ;; Pin down formula and put it in cell
 (define (put-formula-in-cell formula id)
@@ -726,6 +761,9 @@
     (list 'set-selected-column! set-selected-column!)
     (list 'select-id! select-id!)
     (list 'vector-set! vector-set!)
+    (list 'put-expr put-expr)
+    (list 'clear-in-row clear-in-row)
+    (list 'clear-in-col clear-in-col)
     (list 'set-screen-corner-cell-id! set-screen-corner-cell-id!)))
 
 ;; Cell names
