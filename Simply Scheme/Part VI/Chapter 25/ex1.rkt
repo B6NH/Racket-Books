@@ -38,6 +38,15 @@
 (define total-cols 26)
 (define total-rows 30) ;; Works with value 40
 
+(define default-column-number 6)
+(define default-column-width 10)
+(define column-space 2)
+
+;; Calculate spreadsheet width
+(define spreadsheet-width
+  (* default-column-number
+     (+ default-column-width column-space)))
+
 ;; Main function
 (define (spreadsheet)
 
@@ -624,7 +633,8 @@
   ;; Display rows starting from corner cell
   (show-rows 20
     (id-column (screen-corner-cell-id))
-    (id-row (screen-corner-cell-id)))
+    (id-row (screen-corner-cell-id))
+    6)
 
   ;; Display selected cell name at the botoom
   (display-cell-name (selection-cell-id))
@@ -650,30 +660,70 @@
   (display "  ")
 
   ;; Display labels
-  (show-label 6 col-number)
+  (show-label (visible-columns col-number) col-number)
 
   ;; End displaying labels with newline
   (newline))
 
 ;; Display all labels
 (define (show-label to-go this-col-number)
-  (cond
-    ((= to-go 0) '())
-    (else
+  (if (= to-go 0)
+      '()
 
-      (display "  -----")
+      ;; Get column width
+      (let ((cwidth (vector-ref *column-widths* (- this-col-number 1))))
 
-      ;; Column letter
-      (display (number->letter this-col-number))
+        ;; Half space before column letter
+        (let ((hwidth (floor (/ cwidth 2))))
 
-      (display "----")
+          (display "  ")
 
-      ;; Recursive call
-      (show-label (- to-go 1) (+ 1 this-col-number)))))
+          ;; Display '-' symbols
+          (display-lines hwidth)
 
+          ;; Column letter
+          (display (number->letter this-col-number))
+
+          ;; Display remaining '-' symbols to fill column
+          (display-lines (- cwidth 1 hwidth))
+
+          ;; Recursive call
+          (show-label (- to-go 1) (+ 1 this-col-number))))))
+
+;; Display '-' n times
+(define (display-lines n)
+  (if (zero? n)
+      'done
+      (begin
+        (display "-")
+        (display-lines (- n 1)))))
+
+;; Determine how many columns can be displayed
+(define (visible-columns start-column)
+  (visible-columns-helper (- start-column 1) 0 0))
+
+;; Add column widths
+(define (visible-columns-helper current-column num-cols twidth)
+
+  ;; Make sure that column index is within bounds
+  (if (>= current-column total-cols)
+      num-cols
+
+      ;; Calculate new width
+      (let ((new-width (+ twidth (vector-ref *column-widths* current-column) 2)))
+
+        ;; If there is no more space return number of columns
+        (if (> new-width spreadsheet-width)
+            num-cols
+
+            ;; Otherwise increment argument values and call function recursively
+            (visible-columns-helper
+              (+ current-column 1)
+              (+ num-cols 1)
+              new-width)))))
 
 ;; Show all rows
-(define (show-rows to-go col row)
+(define (show-rows to-go col row num-rows)
   (cond
     ((= to-go 0) 'done)
     (else
@@ -683,11 +733,11 @@
       (display " ")
 
       ;; Display 1 row
-      (show-row 6 col row)
+      (show-row num-rows col row)
       (newline)
 
       ;; Display remaining rows
-      (show-rows (- to-go 1) col (+ row 1)))))
+      (show-rows (- to-go 1) col (+ row 1) num-rows))))
 
 (define (show-row to-go col row)
   (cond
