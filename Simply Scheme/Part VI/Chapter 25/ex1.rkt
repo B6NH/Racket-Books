@@ -622,45 +622,59 @@
 (define (print-screen)
 
   ;; Print 3 newlines above spreadsheet
-  (newline)
-  (newline)
-  (newline)
+  (print-newlines 3)
 
-  ;; Pass visible cell column id to show-column-labels
-  ;; function and show all labels
-  (show-column-labels (id-column (screen-corner-cell-id)))
+  ;; Begin displaying from corner column
+  (let ((idc (id-column (screen-corner-cell-id))))
 
-  ;; Display rows starting from corner cell
-  (show-rows 20
-    (id-column (screen-corner-cell-id))
-    (id-row (screen-corner-cell-id))
-    6)
+    ;; Number of visible columns
+    (let ((vis-cols (visible-columns idc)))
 
-  ;; Display selected cell name at the botoom
-  (display-cell-name (selection-cell-id))
-  (display ":  ")
+      ;; Show labels
+      (show-column-labels idc vis-cols)
 
-  ;; Selected cell value
-  (show (cell-value (selection-cell-id)))
+      ;; Display rows starting from corner cell
+      (show-rows
+        20
+        idc
+        (id-row (screen-corner-cell-id))
+        vis-cols)
 
-  ;; Show expression value from selected cell
-  (display-expression (cell-expr (selection-cell-id)))
-  (newline)
+      ;; Display selected cell name at the botoom
+      (display-cell-name (selection-cell-id))
+      (display ":  ")
 
-  ;; Display prompt
-  (display "?? "))
+      ;; Selected cell value
+      (show (cell-value (selection-cell-id)))
+
+      ;; Show expression value from selected cell
+      (display-expression (cell-expr (selection-cell-id)))
+      (newline)
+
+      ;; Display prompt
+      (display "?? "))))
 
 (define (display-cell-name id)
   (display (number->letter (id-column id)))
   (display (id-row id)))
 
-(define (show-column-labels col-number)
+;; Print newline n times
+(define (print-newlines n)
+  (if (zero? n)
+      'done
+      (begin
+        (newline)
+        (print-newlines (- n 1)))))
+
+;; Display 'visible-cols' column labels
+;; Start with column 'col-number'
+(define (show-column-labels col-number visible-cols)
 
   ;; Blank before column labels
   (display "  ")
 
   ;; Display labels
-  (show-label (visible-columns col-number) col-number)
+  (show-label visible-cols col-number)
 
   ;; End displaying labels with newline
   (newline))
@@ -723,26 +737,25 @@
               new-width)))))
 
 ;; Show all rows
-(define (show-rows to-go col row num-rows)
-  (cond
-    ((= to-go 0) 'done)
-    (else
+(define (show-rows to-go col row num-cols)
+  (if (= to-go 0)
+      'done
+      (begin
 
-      ;; Align row
-      (display (align row 2 0))
-      (display " ")
+        ;; Align row
+        (display (align row 2 0))
+        (display " ")
 
-      ;; Display 1 row
-      (show-row num-rows col row)
-      (newline)
+        ;; Display 1 row
+        (show-row num-cols col row)
+        (newline)
 
-      ;; Display remaining rows
-      (show-rows (- to-go 1) col (+ row 1) num-rows))))
+        ;; Display remaining rows
+        (show-rows (- to-go 1) col (+ row 1) num-cols))))
 
 (define (show-row to-go col row)
-  (cond
-    ((= to-go 0) 'done)
-    (else
+  (if (= to-go 0)
+       'done
       (let ((col-index (- col 1)))
 
         ;; Display selection symbol
@@ -755,7 +768,7 @@
 
         ;; Ending selection symbol
         (display (if (selected-indices? col row) "<" " "))
-        (show-row (- to-go 1) (+ 1 col) row)))))
+        (show-row (- to-go 1) (+ 1 col) row))))
 
 ;; Check if this cell is selected
 (define (selected-indices? col row)
