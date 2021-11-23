@@ -51,6 +51,7 @@
   (db-records (current-db)))
 
 (define (new-db filename fields)
+  (clear-current-db!)
   (set-current-db! (make-db filename fields '()))
   'created)
 
@@ -152,6 +153,9 @@
 (define (show-record-with-fields record)
   (show-record (current-fields) record))
 
+(define (current-db-name)
+  (db-filename (current-db)))
+
 (define (edit-record index)
   (let ((rec (get-current-record-at index)))
     (show-record-with-fields rec)
@@ -161,6 +165,52 @@
       (display field)
       (vector-set! rec (get-current-field-index field) (read))
       (show-record-with-fields rec))))
+
+(define (save-db)
+  (let ((port (open-output-file (current-db-name))))
+    (write (current-db) port)
+    (close-output-port port)
+    'saved))
+
+(define (load-db filename)
+  (let ((port (open-input-file filename)))
+    (clear-current-db!)
+    (set-current-db! (read port))
+    (close-input-port port)
+    'loaded))
+
+(define (clear-current-db!)
+ (if (no-db?)
+     'nothing
+     (begin
+       (if (ask "Save current database?")
+           (save-db)
+           'done)
+       (set-current-db! #f)
+       'cleared)))
+
+(define (get field-name record)
+  (vector-ref record (get-current-field-index field-name)))
+
+;; Create empty record
+(define blank-record #t)
+
+;; Edit record field
+(define (record-set! field-name record new-value) #t)
+
+(define (sort predicate) 'sorted)
+
+(define (sort-on-by field-name predicate) 'sorted)
+
+(define (generic-before? arg1 arg2) #t)
+
+(define (sort-on field-name) 'sorted)
+
+(define (add-field field-name initial-value) 'added)
+
+(define (save-selection filename) 'saved)
+
+(define (merge-db filename field-name) 'merged)
 
 (define test-db
   #("albums"
