@@ -1,0 +1,1 @@
+#("albums" (artist title year brian-likes?) (#((the bill frisell band) "Where in the World?" 1991 #f) #((the beatles) "Rubber Soul" 1965 #t) #((frank zappa) "Hot Rats" 1970 #f) #((the zombies) "Odessey and Oracle" 1967 #t) #((the beatles) "A Hard Day's Night" 1964 #t)))

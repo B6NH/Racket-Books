@@ -1,10 +1,45 @@
 ; Database
 
-;;#lang racket
 (require (planet dyoo/simply-scheme:2:2))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Functions
 
 ;; Load program in racket interactive mode
 ;; (load "database.rkt")
+
+;; Create new database
+;; (new-db "albums" '(artist title year brian-likes?))
+
+;; Insert data
+;; (insert)
+
+;; Show data
+;; (list-db)
+
+;; Show number of records in current database
+;; (count-db)
+
+;; Edit record at index
+;; (edit-record 2)
+
+;; Add 'category field with default value 'rock
+;; (add-field 'category 'rock)
+
+;; Add field 'matt-likes? with default value #f
+;; (add-field 'matt-likes?)
+
+;; Sort database
+;; (sort-on 'year)
+
+;; Save database (file name is the same as database name)
+;; (save-db)
+
+;; Load database
+;; (load-db "albums")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; The database ADT: a filename, list of fields and list of records
 
@@ -67,20 +102,23 @@
 (define (db-insert record db)
   (db-set-records! db (cons record (db-records db))))
 
+(define (set-current-records! records)
+  (db-set-records! (current-db) records))
+
 (define (get-record)
   (get-record-loop 0
-    (make-vector (length (current-fields)))
+    (blank-record)
     (current-fields)))
 
-(define (get-record-loop which-field record fields)
+(define (get-record-loop field-index record fields)
   (if (null? fields)
       record
       (begin
         (display "Value for ")
         (display (car fields))
         (display "--> ")
-        (vector-set! record which-field (read))
-        (get-record-loop (+ which-field 1) record (cdr fields)))))
+        (vector-set! record field-index (read))
+        (get-record-loop (+ field-index 1) record (cdr fields)))))
 
 (define (ask question)
   (display question)
@@ -163,7 +201,7 @@
     (let ((field (read)))
       (display "New value for ")
       (display field)
-      (vector-set! rec (get-current-field-index field) (read))
+      (record-set! field rec (read))
       (show-record-with-fields rec))))
 
 (define (save-db)
@@ -193,20 +231,113 @@
   (vector-ref record (get-current-field-index field-name)))
 
 ;; Create empty record
-(define blank-record #t)
+(define (blank-record)
+  (make-vector (length (current-fields))))
 
 ;; Edit record field
-(define (record-set! field-name record new-value) #t)
+(define (record-set! field-name record new-value)
+  (vector-set! record (get-current-field-index field-name) new-value))
 
-(define (sort predicate) 'sorted)
+(define (copy-vector old new)
+  (copy-vector-helper old new 0))
 
-(define (sort-on-by field-name predicate) 'sorted)
+(define (copy-vector-helper old new index)
+  (if (= index (vector-length old))
+      new
+      (begin
+        (vector-set! new (+ index 1) (vector-ref old index))
+        (copy-vector-helper old new (+ index 1)))))
 
-(define (generic-before? arg1 arg2) #t)
+(define (set-current-fields! fields)
+  (db-set-fields! (current-db) fields))
 
-(define (sort-on field-name) 'sorted)
+(define (adjoin-field record new-value)
+  (let ((vec (make-vector (+ (vector-length record) 1))))
+    (vector-set! vec 0 new-value)
+    (copy-vector record vec)))
 
-(define (add-field field-name initial-value) 'added)
+(define (adjoin-all-records records value)
+  (if (empty? records)
+      records
+      (cons (adjoin-field (car records) value)
+            (adjoin-all-records (cdr records) value))))
+
+(define (selection-sort records predicate)
+  (if (empty? records)
+      records
+      (let ((er (earliest-record records predicate)))
+        (cons er (selection-sort (remove-once er records) predicate)))))
+
+(define (earliest-record records predicate)
+  (earliest-helper (car records) (cdr records) predicate))
+
+(define (earliest-helper so-far rest predicate)
+  (if (empty? rest)
+      so-far
+      (let ((fst (car rest)) (rst (cdr rest)))
+        (if (predicate so-far fst)
+            (earliest-helper so-far rst predicate)
+            (earliest-helper fst rst predicate)))))
+
+(define (remove-once record records)
+  (if (empty? records)
+       '()
+      (let ((fst (car records))
+            (rst (cdr records)))
+        (if (equal? record fst)
+             rst
+             (cons fst (remove-once record rst))))))
+
+(define (sort predicate)
+  (set-current-records!
+    (selection-sort (current-records) predicate))
+  'sorted)
+
+(define (sort-on-by field-name predicate)
+  (sort (lambda (r1 r2)
+          (predicate
+            (get field-name r1) (get field-name r2))))
+  'sorted)
+
+(define (before-list? lst1 lst2)
+  (cond
+    ((empty? lst1) #t)
+    ((empty? lst2) #f)
+    (else
+      (let ((f1 (car lst1)) (f2 (car lst2)))
+        (cond
+          ((generic-before? f1 f2) #t)
+          ((generic-before? f2 f1) #f)
+          (else (before-list? (cdr lst1) (cdr lst2))))))))
+
+(define (before-lst-wrd lst wrd)
+  (generic-before? (car lst) wrd))
+
+(define (before-wrd-lst wrd lst)
+  (generic-before? wrd (car lst)))
+
+(define (generic-before? arg1 arg2)
+  ((cond
+    ((and (number? arg1) (number? arg2)) <)
+    ((and (list? arg1) (list? arg2)) before-list?)
+    ((and (list? arg1) (word? arg2)) before-lst-wrd)
+    ((and (word? arg1) (list? arg2)) before-wrd-lst)
+    (else before?))
+   arg1 arg2))
+
+(define (sort-on field-name)
+  (sort-on-by field-name generic-before?))
+
+(define (add-field field-name . initial-value)
+  (set-current-fields!
+    (cons field-name (current-fields)))
+  (set-current-records!
+    (adjoin-all-records
+      (current-records)
+      (if (empty? initial-value)
+          #f
+          (car initial-value))))
+  'added)
 
 (define (save-selection filename) 'saved)
 
