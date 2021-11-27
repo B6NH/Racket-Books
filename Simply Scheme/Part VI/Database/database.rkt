@@ -68,6 +68,8 @@
 
 (define current-state (vector #f))
 
+(define selected-records '())
+
 (define (no-db?)
   (not (vector-ref current-state 0)))
 
@@ -224,6 +226,7 @@
        (if (ask "Save current database?")
            (save-db)
            'done)
+       (set! selected-records '())
        (set-current-db! #f)
        'cleared)))
 
@@ -339,7 +342,49 @@
           (car initial-value))))
   'added)
 
-(define (save-selection filename) 'saved)
+(define (remove-duplicates lst)
+  (if (empty? lst)
+      lst
+      (let ((fst (car lst)) (rst (cdr lst)))
+        (let ((next (remove-duplicates rst)))
+          (if (member fst rst)
+              next
+              (cons fst next))))))
+
+(define (check-selection-range-helper lst max)
+  (or (empty? lst)
+      (and (>= (car lst) 1)
+           (<= (car lst) max)
+           (check-selection-range-helper (cdr lst) max))))
+
+(define (check-selection-range lst)
+  (check-selection-range-helper lst (count-db)))
+
+(define (select-records indices)
+  (let ((lst (remove-duplicates indices)))
+    (if (check-selection-range lst)
+        (set! selected-records lst)
+        (error "Invalid record index"))))
+
+;; Create vector with selected records
+(define (make-selection-vector lst)
+ (let ((vec (make-vector (length lst))))
+   (make-selection-vector-helper vec (current-records) lst 0 1)))
+
+(define (make-selection-vector-helper vec records indices vector-index record-index)
+  (if (empty? records)
+       vec
+      (begin
+        (if (member record-index indices)
+            (begin
+              (vector-set! vec vector-index (car records))
+              (make-selection-vector-helper
+                vec (cdr records) indices (+ vector-index 1) (+ record-index 1)))
+            (make-selection-vector-helper vec (cdr records) indices vector-index (+ record-index 1))))))
+
+;(define (save-selection filename)
+ ; (let ((port (open-output-file (current-db-name))))
+ ; 'saved)
 
 (define (merge-db filename field-name) 'merged)
 
