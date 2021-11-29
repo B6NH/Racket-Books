@@ -33,6 +33,12 @@
 ;; Sort database
 ;; (sort-on 'year)
 
+;; Select some records
+;; (select-records '(2 4))
+
+;; Save selected records in new file
+;; (save-selection "selected-albums")
+
 ;; Save database (file name is the same as database name)
 ;; (save-db)
 
@@ -120,7 +126,7 @@
         (display (car fields))
         (display "--> ")
         (vector-set! record field-index (read))
-        (get-record-loop (+ field-index 1) record (cdr fields)))))
+        (get-record-loop (add1 field-index) record (cdr fields)))))
 
 (define (ask question)
   (display question)
@@ -148,7 +154,7 @@
         (display (first fields))
         (display ": ")
         (show (vector-ref record index))
-        (show-record-helper (cdr fields) record (+ index 1)))))
+        (show-record-helper (cdr fields) record (add1 index)))))
 
 ;; Display list of records
 (define (show-records fields records)
@@ -160,7 +166,7 @@
       (begin
         (show (string-append "RECORD " (number->string index)))
         (show-record fields (car records))
-        (show-records-helper fields (cdr records) (+ index 1)))))
+        (show-records-helper fields (cdr records) (add1 index)))))
 
 ;; List current database records
 (define (list-db)
@@ -173,7 +179,7 @@
 (define (get-record-at-helper index records current-index)
   (if (= index current-index)
       (car records)
-      (get-record-at-helper index (cdr records) (+ current-index 1))))
+      (get-record-at-helper index (cdr records) (add1 current-index))))
 
 ;; Get record from current database records
 (define (get-current-record-at index)
@@ -185,7 +191,7 @@
 (define (get-field-index-helper field fields index)
   (if (equal? field (car fields))
       index
-      (get-field-index-helper field (cdr fields) (+ index 1))))
+      (get-field-index-helper field (cdr fields) (add1 index))))
 
 (define (get-current-field-index field)
   (get-field-index field (current-fields)))
@@ -226,9 +232,12 @@
        (if (ask "Save current database?")
            (save-db)
            'done)
-       (set! selected-records '())
+       (clear-selected-records!)
        (set-current-db! #f)
        'cleared)))
+
+(define (clear-selected-records!)
+  (set! selected-records '()))
 
 (define (get field-name record)
   (vector-ref record (get-current-field-index field-name)))
@@ -248,14 +257,14 @@
   (if (= index (vector-length old))
       new
       (begin
-        (vector-set! new (+ index 1) (vector-ref old index))
-        (copy-vector-helper old new (+ index 1)))))
+        (vector-set! new (add1 index) (vector-ref old index))
+        (copy-vector-helper old new (add1 index)))))
 
 (define (set-current-fields! fields)
   (db-set-fields! (current-db) fields))
 
 (define (adjoin-field record new-value)
-  (let ((vec (make-vector (+ (vector-length record) 1))))
+  (let ((vec (make-vector (add1 (vector-length record)))))
     (vector-set! vec 0 new-value)
     (copy-vector record vec)))
 
@@ -351,40 +360,46 @@
               next
               (cons fst next))))))
 
+;; Selected index should be in range from 1 to number of records
 (define (check-selection-range-helper lst max)
   (or (empty? lst)
       (and (>= (car lst) 1)
            (<= (car lst) max)
            (check-selection-range-helper (cdr lst) max))))
 
+;; Check if all selected records have valid indices
 (define (check-selection-range lst)
   (check-selection-range-helper lst (count-db)))
 
+;; Select records to save
 (define (select-records indices)
   (let ((lst (remove-duplicates indices)))
     (if (check-selection-range lst)
         (set! selected-records lst)
-        (error "Invalid record index"))))
+        (error "Record index out of range"))))
 
-;; Create vector with selected records
-(define (make-selection-vector lst)
- (let ((vec (make-vector (length lst))))
-   (make-selection-vector-helper vec (current-records) lst 0 1)))
+;; Create list with selected records
+(define (make-selection-list)
+  (make-selection-list-helper (current-records) 1))
 
-(define (make-selection-vector-helper vec records indices vector-index record-index)
+(define (make-selection-list-helper records record-index)
   (if (empty? records)
-       vec
-      (begin
-        (if (member record-index indices)
-            (begin
-              (vector-set! vec vector-index (car records))
-              (make-selection-vector-helper
-                vec (cdr records) indices (+ vector-index 1) (+ record-index 1)))
-            (make-selection-vector-helper vec (cdr records) indices vector-index (+ record-index 1))))))
+      '()
+      (let ((next (make-selection-list-helper (cdr records) (add1 record-index))))
+        (if (member record-index selected-records)
+            (cons (car records) next)
+            next))))
 
-;(define (save-selection filename)
- ; (let ((port (open-output-file (current-db-name))))
- ; 'saved)
+;; Save database copy with selected records in new file
+(define (save-selection filename)
+  (let ((port (open-output-file filename))
+        (db-copy (make-vector 3)))
+    (db-set-filename! db-copy filename)
+    (db-set-fields! db-copy (current-fields))
+    (db-set-records! db-copy (make-selection-list))
+    (write db-copy port)
+    (close-output-port port)
+    'selection-saved))
 
 (define (merge-db filename field-name) 'merged)
 
