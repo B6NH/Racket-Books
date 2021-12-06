@@ -218,12 +218,16 @@
     (close-output-port port)
     'saved))
 
-(define (load-db filename)
+(define (load-db-from-disk filename)
   (let ((port (open-input-file filename)))
-    (clear-current-db!)
-    (set-current-db! (read port))
-    (close-input-port port)
-    'loaded))
+    (let ((data (read port)))
+      (close-input-port port)
+      data)))
+
+(define (load-db filename)
+  (clear-current-db!)
+  (set-current-db!(load-db-from-disk filename))
+  'loaded)
 
 (define (clear-current-db!)
  (if (no-db?)
@@ -250,15 +254,31 @@
 (define (record-set! field-name record new-value)
   (vector-set! record (get-current-field-index field-name) new-value))
 
+;; Copy values from old vector to new one
+;; Start at second position of new vector
+;; For example (copy-vector #(1 2 3) #(4 5 6 7 8) -> #(4 1 2 3 8)
 (define (copy-vector old new)
-  (copy-vector-helper old new 0))
+  (copy-vector-helper old new 0 1))
 
-(define (copy-vector-helper old new index)
-  (if (= index (vector-length old))
+(define (copy-vector-from-beginning old new)
+  (copy-vector-helper old new 0 0))
+
+(define (copy-vector-helper old new index1 index2)
+  (if (= index1 (vector-length old))
       new
       (begin
-        (vector-set! new (add1 index) (vector-ref old index))
-        (copy-vector-helper old new (add1 index)))))
+        (vector-set! new index2 (vector-ref old index1))
+        (copy-vector-helper old new (add1 index1) (add1 index2)))))
+
+(define (expand-vector vec new-length)
+  (let ((new-vector (make-vector new-length #f)))
+    (copy-vector-from-beginning vec new-vector)))
+
+(define (expand-records records new-size)
+  (if (empty? records)
+      '()
+      (cons (expand-vector (car records) new-size)
+            (expand-records (cdr records) new-size))))
 
 (define (set-current-fields! fields)
   (db-set-fields! (current-db) fields))
@@ -293,7 +313,7 @@
 
 (define (remove-once record records)
   (if (empty? records)
-       '()
+      '()
       (let ((fst (car records))
             (rst (cdr records)))
         (if (equal? record fst)
@@ -401,7 +421,83 @@
     (close-output-port port)
     'selection-saved))
 
-(define (merge-db filename field-name) 'merged)
+(define (remove-duplicate-fields fields1 fields2)
+  (if (empty? fields1)
+      fields2
+      (remove-duplicate-fields
+        (cdr fields1)
+        (remove-once (car fields1) fields2))))
+
+(define (merge-fields fields1 fields2)
+  (append fields1 (remove-duplicate-fields fields1 fields2)))
+
+;; Merge database records
+(define (merge-records records other-records first-index common-index1 common-index2)
+  (if (empty? records)
+      '()
+      (let ((result (merge-record (car records) other-records first-index common-index1 common-index2)))
+        (cons (car result)
+              (merge-records (cdr records) (cadr result) first-index common-index1 common-index2)))))
+
+;; Return list where first element is merged record and
+;; second element is list of remaining records from other database
+(define (merge-record record records first-index common-index1 common-index2)
+
+  (cond
+
+    ;; Record not found
+    ((empty? records) (list record '()))
+
+    ;; Merge record
+    ((equal? (vector-ref record common-index1)
+             (vector-ref (car records) common-index2))
+     (list
+       (merge-record-helper record (car records) common-index2 first-index 0)
+       records))
+
+    ;; Continue searching
+    ((generic-before? (vector-ref (car records) common-index2) (vector-ref record common-index1))
+     (merge-record record (cdr records) first-index common-index1 common-index2))
+
+    (else
+      (list record records))))
+
+;; Merge record
+(define (merge-record-helper record other-record common-index index1 index2)
+
+  (cond
+
+    ;; Record already merged
+    ((= index1 (vector-length record)) record)
+
+    ;; Skip common field in other record
+    ((= index2 common-index)
+     (merge-record-helper
+       record other-record common-index
+       index1 (add1 index2)))
+
+    ;; Copy record field and continue
+    (else
+      (begin
+        (vector-set! record index1 (vector-ref other-record index2))
+        (merge-record-helper
+          record other-record common-index
+          (add1 index1) (add1 index2))))))
+
+;; Merge current database with database from file
+;; Both databases should be already sorted by field-name
+(define (merge-db filename field-name)
+  (let ((other-db (load-db-from-disk filename)))
+    (let ((first-index (length (current-fields))))
+      (set-current-fields! (merge-fields (current-fields) (db-fields other-db)))
+      (set-current-records!
+        (merge-records
+          (expand-records (current-records) (length (current-fields)))
+          (db-records other-db)
+          first-index
+          (get-field-index field-name (current-fields))
+          (get-field-index field-name (db-fields other-db))))
+      'merged)))
 
 (define test-db
   #("albums"
