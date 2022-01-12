@@ -45,6 +45,12 @@
 ;; Load database
 ;; (load-db "albums")
 
+;; Merge database
+;; (merge-db "bands" 'artist)
+
+;; Average field value
+;; (average 'year)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; The database ADT: a filename, list of fields and list of records
@@ -274,6 +280,7 @@
   (let ((new-vector (make-vector new-length #f)))
     (copy-vector-from-beginning vec new-vector)))
 
+;; Increase size of all records
 (define (expand-records records new-size)
   (if (empty? records)
       '()
@@ -433,11 +440,20 @@
 
 ;; Merge database records
 (define (merge-records records other-records first-index common-index1 common-index2)
+
   (if (empty? records)
       '()
-      (let ((result (merge-record (car records) other-records first-index common-index1 common-index2)))
+
+      ;; Merge one record
+      (let ((result (merge-record (car records) other-records
+                     first-index common-index1 common-index2)))
+
+        ;; Add first merged record
         (cons (car result)
-              (merge-records (cdr records) (cadr result) first-index common-index1 common-index2)))))
+
+              ;; Merge remaining records
+              (merge-records (cdr records) (cadr result)
+                              first-index common-index1 common-index2)))))
 
 ;; Return list where first element is merged record and
 ;; second element is list of remaining records from other database
@@ -452,13 +468,19 @@
     ((equal? (vector-ref record common-index1)
              (vector-ref (car records) common-index2))
      (list
+
+       ;; Merge record with the same common field value
+       ;; Skip other database value at common-index2
+       ;; Start filling record at first-index and reading other database at index 0
        (merge-record-helper record (car records) common-index2 first-index 0)
        records))
 
     ;; Continue searching
-    ((generic-before? (vector-ref (car records) common-index2) (vector-ref record common-index1))
+    ((generic-before? (vector-ref (car records) common-index2)
+                      (vector-ref record common-index1))
      (merge-record record (cdr records) first-index common-index1 common-index2))
 
+    ;; Return original record
     (else
       (list record records))))
 
@@ -468,6 +490,7 @@
   (cond
 
     ;; Record already merged
+    ;; Value of index1 is larger than maximum valid index for record field
     ((= index1 (vector-length record)) record)
 
     ;; Skip common field in other record
@@ -479,7 +502,11 @@
     ;; Copy record field and continue
     (else
       (begin
+
+        ;; Set field value
         (vector-set! record index1 (vector-ref other-record index2))
+
+        ;; Set next record field
         (merge-record-helper
           record other-record common-index
           (add1 index1) (add1 index2))))))
@@ -487,18 +514,54 @@
 ;; Merge current database with database from file
 ;; Both databases should be already sorted by field-name
 (define (merge-db filename field-name)
+
+  ;; Load other database
   (let ((other-db (load-db-from-disk filename)))
+
+    ;; Index of first new field
     (let ((first-index (length (current-fields))))
+
+      ;; Merge database fields
       (set-current-fields! (merge-fields (current-fields) (db-fields other-db)))
+
+      ;; Merge records
       (set-current-records!
+
         (merge-records
+
+          ;; Prepare records by increasing their size
           (expand-records (current-records) (length (current-fields)))
+
+          ;; Get records from other database
           (db-records other-db)
+
+          ;; New field index
           first-index
+
+          ;; Field index in current database
           (get-field-index field-name (current-fields))
+
+          ;; Field index in other database
           (get-field-index field-name (db-fields other-db))))
+
       'merged)))
 
+;; Sum field value
+(define (sum-field field-name)
+  (sum-field-helper field-name (current-records)))
+
+(define (sum-field-helper field-name records)
+  (if (empty? records)
+      0
+      (+ (get field-name (car records))
+         (sum-field-helper field-name (cdr records)))))
+
+;; Calculate average field value
+(define (average field-name)
+ (exact->inexact (/ (sum-field field-name) (count-db))))
+
+;; Database is vector of length 3
+;; #(name field_names list_of_records)
 (define test-db
   #("albums"
     (ARTIST TITLE YEAR BRIAN-LIKES?)
