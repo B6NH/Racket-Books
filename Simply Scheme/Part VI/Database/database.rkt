@@ -209,14 +209,29 @@
   (db-filename (current-db)))
 
 (define (edit-record index)
+
+  ;; Load record
   (let ((rec (get-current-record-at index)))
+
+    ;; Display record
     (show-record-with-fields rec)
     (display "Edit which field? ")
+
+    ;; Read field name or false
     (let ((field (read)))
-      (display "New value for ")
-      (display field)
-      (record-set! field rec (read))
-      (show-record-with-fields rec))))
+
+      ;; Set new value for field
+      (if field
+        (begin
+          (display "New value for ")
+          (display field)
+          (record-set! field rec (read))
+          (show-record-with-fields rec)
+
+          ;; Edit another field
+          (edit-record index))
+
+        'edited))))
 
 (define (save-db)
   (let ((port (open-output-file (current-db-name))))
@@ -249,6 +264,7 @@
 (define (clear-selected-records!)
   (set! selected-records '()))
 
+;; Get field value from record
 (define (get field-name record)
   (vector-ref record (get-current-field-index field-name)))
 

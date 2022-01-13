@@ -138,6 +138,7 @@
 
 (and
   (equal? (match 2copies '(a b a b)) '(copy a b !))
+  (equal? (match 2copies '(a b c a b c)) '(copy a b c !))
   (equal? (match 2copies '(a b a b a)) 'failed)
   (equal? (match 2copies '(b a a b)) 'failed))
 
@@ -175,8 +176,11 @@
 
 (define p2 '(*x *y &y &x))
 
-(equal? (match p2 '(fire water water fire))
-        '(x fire ! y water !))
+(and
+  (equal? (match p2 '(fire water water fire))
+          '(x fire ! y water !))
+  (equal? (match p2 '(al al al al))
+          '(x al ! y al !)))
 
 ; Ex 7
 
