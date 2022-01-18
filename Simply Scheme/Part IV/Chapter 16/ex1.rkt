@@ -16,92 +16,199 @@
     ;; If the pattern is empty, the sentence should also be empty
     ((empty? pattern)
      (if (empty? sent) known-values 'failed))
+
+    ;; First element in pattern is special symbol
     ((special? (first pattern))
+
+     ;; Placeholder is special symbol (possibly with name)
      (let ((placeholder (first pattern)))
-       (match-special (first placeholder)
-                      (bf placeholder)
-                      (bf pattern)
-                      sent
-                      known-values)))
+
+       ;; Match special symbol
+       (match-special (first placeholder) ;; howmany (symbol)
+                      (bf placeholder) ;; name
+                      (bf pattern) ;; rest of pattern
+                      sent ;; sentence
+                      known-values))) ;; database
+
+    ;; Pattern is not empty and doesnt contain special
+    ;; symbol at the beginning so sentence can't be empty
     ((empty? sent) 'failed)
+
+    ;; Match one normal word and call function recursively
     ((equal? (first pattern) (first sent))
      (match-using-known-values
       (bf pattern) (bf sent) known-values))
+
+    ;; Match failed
     (else 'failed)))
 
 ;; Check special symbol
 (define (special? wd)
   (member? (first wd) '(* & ? !)))
 
+;; Match special symbol
 (define (match-special howmany name pattern-rest sent known-values)
+
+  ;; Get placeholder value
   (let ((old-value (lookup name known-values)))
     (cond
+
+      ;; Value already known
       ((not (equal? old-value 'no-value))
+
+       ;; Check if old-value size is consistent with howmany size
        (if (length-ok? old-value howmany)
+
+        ;; Match with known value
         (already-known-match
           old-value pattern-rest sent known-values)
+
+        ;; Fail
         'failed))
+
+      ;; Match all symbols using the same function with different parameters
       ((equal? howmany '?)
+
+        ;; No min, max
         (longest-match name pattern-rest sent 0 #t known-values))
+
       ((equal? howmany '!)
+
+        ;; Min, max
         (longest-match name pattern-rest sent 1 #t known-values))
+
       ((equal? howmany '*)
+
+        ;; No min, no max
         (longest-match name pattern-rest sent 0 #f known-values))
+
       ((equal? howmany '&)
+
+        ;; Min, no max
         (longest-match name pattern-rest sent 1 #f known-values)))))
 
+;; Check pattern size consistency
 (define (length-ok? value howmany)
   (cond
+
+    ;; If old value is empty, placeholder with the same name should be '?' or '*'
     ((empty? value) (member? howmany '(? *)))
+
+    ;; If old value is longer than 1 word it must be '*' or '&'
     ((not (empty? (bf value))) (member? howmany '(* &)))
+
+    ;; One word can match anything
     (else #t)))
 
 (define (already-known-match value pattern-rest sent known-values)
+
+  ;; Remove matching part of sentence
   (let ((unmatched (chop-leading-substring value sent)))
+
+    ;; Check match
     (if (not (equal? unmatched 'failed))
+
+        ;; Continue after successful match
         (match-using-known-values
           pattern-rest unmatched known-values)
+
+        ;; Return 'failed
         'failed)))
 
+;; Remove value from sentence
 (define (chop-leading-substring value sent)
   (cond
+
+    ;; Value already removed
     ((empty? value) sent)
+
+    ;; Sentence can't be empty if there is value to remove
     ((empty? sent) 'failed)
+
+    ;; Remove 1 word and continue recursively
     ((equal? (first value) (first sent))
      (chop-leading-substring (bf value) (bf sent)))
+
+    ;; Value doesn't match sentence
     (else 'failed)))
 
+;; Find longest match with unknown name
 (define (longest-match name pattern-rest sent min max-one? known-values)
   (cond
+
+    ;; Empty sentence
     ((empty? sent)
+
+     ;; Min is zero for '?' and '*'
      (if (= min 0)
+
+         ;; Add placeholder name with empty
+         ;; value to database and continue
          (match-using-known-values
               pattern-rest
               sent
               (add name '() known-values))
-         'failed))
-    (max-one?
-      (lm-helper name pattern-rest (se (first sent))
-      (bf sent) min known-values))
-    (else
-      (lm-helper name pattern-rest sent '() min known-values))))
 
-(define (lm-helper name pattern-rest
-      sent-matched sent-unmatched min known-values)
+         ;; Empty sentence doesn't match '!' and '&' (min = 1)
+         'failed))
+
+    ;; Match at most 1 word ('?' and '!')
+    (max-one?
+
+      ;; Try matching 1 word
+      (lm-helper
+        name
+        pattern-rest
+        (se (first sent)) ;; one matched word (sentence is not empty, look above!)
+        (bf sent) ;; unmatched words
+        min
+        known-values))
+
+    ;; Match symbols with no size limit ('*' and '&')
+    (else
+
+      ;; Start by trying to match whole sentence
+      (lm-helper
+        name
+        pattern-rest
+        sent ;; all words matched
+        '() ;; no remaining words
+        min
+        known-values))))
+
+(define (lm-helper name pattern-rest sent-matched sent-unmatched min known-values)
+
+  ;; Check minimum word length (can sentence-matched be empty at all?)
   (if (< (length sent-matched) min)
       'failed
+
+      ;; Match using known values with unmatched part of sentence
+      ;; Matched part of sentence is added to dictionary
       (let ((tentative-result (match-using-known-values
-            pattern-rest
-            sent-unmatched
-            (add name sent-matched known-values))))
-(cond ((not (equal? tentative-result 'failed)) tentative-result)
-      ((empty? sent-matched) 'failed)
-      (else (lm-helper name
-            pattern-rest
-            (bl sent-matched)
-            (se (last sent-matched) sent-unmatched)
-            min
-            known-values))))))
+                                 pattern-rest
+                                 sent-unmatched
+                                 (add name sent-matched known-values))))
+        (cond
+
+          ;; Return successfull result
+          ((not (equal? tentative-result 'failed)) tentative-result)
+
+          ((empty? sent-matched) 'failed)
+
+          ;; Try different match
+          (else
+            (lm-helper
+              name
+              pattern-rest
+
+              ;; Shorten matched part of the sentence
+              (bl sent-matched)
+
+              ;; Extend unmatched part of the sentence
+              (se (last sent-matched) sent-unmatched)
+
+              min
+              known-values))))))
 
 ;;; Known values database abstract data type
 
@@ -212,6 +319,8 @@
 (displayln "***Tests***")
 
 (define db1 '(x mega drive ! y water !))
+(define many '(liquid drum mix))
+(define single '(drugs))
 
 (and
 
