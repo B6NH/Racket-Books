@@ -1,8 +1,9 @@
 # Racket-Books
 
-Racket exercises from 2 books
+Racket/Scheme exercises from 3 books
 * [How to Design Programs](How%20to%20Design%20Programs)
 * [Simply Scheme: Introducing Computer Science](Simply%20Scheme)
+* [Teach Yourself Scheme in Fixnum Days](Teach%20Yourself%20Scheme%20in%20Fixnum%20Days)
 
 
 ## Screenshots (HTDP)
@@ -53,3 +54,5 @@ Racket exercises from 2 books
 5. [Abstraction](Simply%20Scheme/Part%20V)
 6. [Sequential Programming](Simply%20Scheme/Part%20VI)
 7. [Conclusion: Computer Science](Simply%20Scheme/Part%20VII)
+
+### Teach Yourself Scheme in Fixnum Days
