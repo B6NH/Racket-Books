@@ -1,5 +1,5 @@
 
-; Structures & Alists
+; Structures, Alists, Classes
 
 ; -------------------------------------------------------------------
 
@@ -202,4 +202,124 @@
       (equal? (table-get table1 'color) 'red)
       (equal? (table-get table1 'size 'default-size) 'default-size)))
   (newline))
+
+; -------------------------------------------------------------------
+
+(defstruct standard-class
+  slots superclass method-names method-vector)
+
+; Return class of instance (vector)
+(define class-of1
+  (lambda (instance)
+    (vector-ref instance 0)))
+
+(define class-of2
+  (lambda (x)
+    (if (vector? x)
+        (let ((n (vector-length x)))
+          (if (>= n 1)
+              (let ((c (vector-ref x 0)))
+                (if (standard-class? c) c #t))
+              #t))
+        #t)))
+
+; Get instance slot value
+(define slot-value
+  (lambda (instance slot)
+    (let* ((class (class-of instance))
+           (slot-index (list-position slot (standard-class.slots class))))
+      (vector-ref instance (+ slot-index 1)))))
+
+; Set instance slot value
+(define set!slot-value
+  (lambda (instance slot new-val)
+    (let* ((class (class-of instance))
+           (slot-index (list-position slot (standard-class.slots class))))
+      (vector-set! instance (+ slot-index 1) new-val))))
+
+(define simple-bike-class
+  (make-standard-class
+   'superclass #t
+   'slots '(frame parts size)
+   'method-names '()
+   'method-vector #()))
+
+(define delete-duplicates
+  (lambda (s)
+    (if (null? s)
+        s
+        (let ((a (car s)) (d (cdr s)))
+          (if (memv a d)
+              (delete-duplicates d)
+              (cons a (delete-duplicates d)))))))
+
+(define create-class-proc
+  (lambda (superclass slots method-names method-vector)
+    (make-standard-class
+     'superclass
+       superclass
+     'slots
+       (let ((superclass-slots
+               (if (not (eqv? superclass #t))
+                   (standard-class.slots superclass)
+                   '())))
+         (if (null? superclass-slots)
+             slots
+             (delete-duplicates (append slots superclass-slots))))
+     'method-names
+       method-names
+     'method-vector
+       method-vector)))
+
+(define-macro create-class
+  (lambda (superclass slots . methods)
+    `(create-class-proc
+      ,superclass
+      (list ,@(map (lambda (slot) `',slot) slots))
+      (list ,@(map (lambda (method) `',(car method)) methods))
+      (vector ,@(map (lambda (method) `,(cadr method)) methods)))))
+
+; Make class instance (vector)
+; Its first element is class object
+; Remaining elements are slot values
+; For example: #(#(standard-class (frame parts size) #t () #()) cromoly alivio 18.5)
+(define make-instance
+  (lambda (class . slot-value-twosomes)
+
+    ; List of slots
+    (let* ((slotlist (standard-class.slots class))
+
+           ; Number of slots
+           (n (length slotlist))
+
+           ; Object vector (slots + class)
+           (instance (make-vector (+ n 1))))
+
+      ; Set object class
+      (vector-set! instance 0 class)
+
+      ; Loop through slot-value pairs
+      (let loop ((slot-value-twosomes slot-value-twosomes))
+        (if (null? slot-value-twosomes)
+
+            ; Return new object
+            instance
+
+            ; Find slot index
+            (let ((k (list-position (car slot-value-twosomes) slotlist)))
+
+              ; Set slot value
+              (vector-set! instance (+ k 1) (cadr slot-value-twosomes))
+
+              ; Skip 2 processed elements
+              (loop (cddr slot-value-twosomes))))))))
+
+(define send #t)
+
+(define my-bike
+  (make-instance
+    simple-bike-class
+      'frame 'cromoly
+      'size '18.5
+      'parts 'alivio))
 
