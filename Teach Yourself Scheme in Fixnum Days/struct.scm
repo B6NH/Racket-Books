@@ -2,6 +2,8 @@
 ; Structures, Alists, Classes
 
 ; -------------------------------------------------------------------
+; Structures & Alists
+; -------------------------------------------------------------------
 
 (define list-position
   (lambda (o l)
@@ -154,6 +156,8 @@
 
 (begin
 
+  (display "----- Structures & Alists -----\n")
+
   (display
     (and
       (= (tree.height coconut) 50)
@@ -204,6 +208,8 @@
   (newline))
 
 ; -------------------------------------------------------------------
+; Classes
+; -------------------------------------------------------------------
 
 (defstruct standard-class
   slots superclass method-names method-vector)
@@ -213,6 +219,7 @@
   (lambda (instance)
     (vector-ref instance 0)))
 
+; Return class of any Scheme object
 (define class-of2
   (lambda (x)
     (if (vector? x)
@@ -226,24 +233,18 @@
 ; Get instance slot value
 (define slot-value
   (lambda (instance slot)
-    (let* ((class (class-of instance))
+    (let* ((class (class-of2 instance))
            (slot-index (list-position slot (standard-class.slots class))))
       (vector-ref instance (+ slot-index 1)))))
 
 ; Set instance slot value
 (define set!slot-value
   (lambda (instance slot new-val)
-    (let* ((class (class-of instance))
+    (let* ((class (class-of2 instance))
            (slot-index (list-position slot (standard-class.slots class))))
       (vector-set! instance (+ slot-index 1) new-val))))
 
-(define simple-bike-class
-  (make-standard-class
-   'superclass #t
-   'slots '(frame parts size)
-   'method-names '()
-   'method-vector #()))
-
+; Remove duplicates from list
 (define delete-duplicates
   (lambda (s)
     (if (null? s)
@@ -253,21 +254,33 @@
               (delete-duplicates d)
               (cons a (delete-duplicates d)))))))
 
+; Create subclass
 (define create-class-proc
   (lambda (superclass slots method-names method-vector)
     (make-standard-class
+
      'superclass
        superclass
+
      'slots
+
+       ; Set superclass slots
        (let ((superclass-slots
                (if (not (eqv? superclass #t))
                    (standard-class.slots superclass)
                    '())))
+
          (if (null? superclass-slots)
+
+             ; Keep original slots
              slots
+
+             ; Append slots and remove duplicates
              (delete-duplicates (append slots superclass-slots))))
+
      'method-names
        method-names
+
      'method-vector
        method-vector)))
 
@@ -314,12 +327,125 @@
               ; Skip 2 processed elements
               (loop (cddr slot-value-twosomes))))))))
 
-(define send #t)
+; Call method on object / Send message to object
+(define send
+  (lambda (method instance . args)
+    (let ((proc
 
-(define my-bike
+           ; Look for method
+           (let loop ((class (class-of2 instance)))
+             (if (eqv? class #t)
+
+                 ; Method not found
+                 (error 'send)
+
+                 ; Look for method in current class
+                 (let ((k (list-position method (standard-class.method-names class))))
+                   (if k
+
+                       ; Method found
+                       (vector-ref (standard-class.method-vector class) k)
+
+                       ; Look for method in superclass
+                       (loop (standard-class.superclass class))))))))
+
+      ; Apply found method
+      (apply proc instance args))))
+
+; Create simple standard class
+(define simple-bike-class
+  (make-standard-class
+    'superclass #t
+    'slots '(frame parts size)
+    'method-names '()
+    'method-vector #()))
+
+; Create class using 'create-class' macro
+(define bike-class
+  (create-class
+
+   ; Superclass
+   #t
+
+   ; Slots
+   (frame size parts chain tires)
+
+   ; Method(s)
+   ; Parameter 'me' is current object
+   (check-fit (lambda (me inseam)
+                (let ((bike-size (slot-value me 'size))
+                      (ideal-size (* inseam 3/5)))
+                  (let ((diff (- bike-size ideal-size)))
+                    (cond
+                      ((<= -1 diff 1) 'perfect-fit)
+                      ((<= -2 diff 2) 'fits-well)
+                      ((< diff -2) 'too-small)
+                      ((> diff 2) 'too-big))))))))
+
+; Create subclass of bike-class
+(define mtn-bike-class
+  (create-class
+
+    ; Superclass
+    bike-class
+
+    ; New slot
+    (suspension)
+
+    ; Overridden method
+    (check-fit (lambda (me inseam)
+                 (let ((bike-size (slot-value me 'size))
+                       (ideal-size (- (* inseam 3/5) 2)))
+                   (let ((diff (- bike-size ideal-size)))
+                     (cond
+                       ((<= -2 diff 2) 'perfect-fit)
+                       ((<= -4 diff 4) 'fits-well)
+                       ((< diff -4) 'too-small)
+                       ((> diff 4) 'too-big))))))))
+
+; -------------------------------------------------------------------
+
+(define my-bike1
   (make-instance
     simple-bike-class
       'frame 'cromoly
       'size '18.5
       'parts 'alivio))
 
+(define my-bike2
+  (make-instance
+    bike-class
+      'frame 'titanium
+      'size 21
+      'parts 'ultegra
+      'chain 'sachs
+      'tires 'continental))
+
+(define my-bike3
+  (make-instance
+    mtn-bike-class
+      'frame 'hiten
+      'size 25
+      'parts 'acera
+      'chain 'shimano
+      'tires 'michelin
+      'suspension 'ceriani))
+
+; -------------------------------------------------------------------
+
+(begin
+
+  (display "----- Classes -----\n")
+
+  (display
+    (and
+      (eqv? (send 'check-fit my-bike2 25) 'too-big)
+      (eqv? (send 'check-fit my-bike2 32) 'fits-well)
+      (eqv? (send 'check-fit my-bike2 36) 'perfect-fit)
+      (eqv? (send 'check-fit my-bike2 50) 'too-small)
+      (eqv? (send 'check-fit my-bike3 32) 'too-big)
+      (eqv? (send 'check-fit my-bike3 40) 'fits-well)
+      (eqv? (send 'check-fit my-bike3 45) 'perfect-fit)
+      (eqv? (send 'check-fit my-bike3 55) 'too-small)))
+
+  (newline))
