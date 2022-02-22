@@ -14,6 +14,14 @@
               i
               (loop (+ i 1) (cdr l)))))))
 
+; Map function 'f' that returns list
+(define append-map
+  (lambda (f s)
+    (let loop ((s s))
+      (if (null? s)
+          '()
+          (append (f (car s)) (loop (cdr s)))))))
+
 (define-macro defstruct
   (lambda (s . ff)
     (let ((s-s (symbol->string s)) (n (length ff)))
@@ -244,6 +252,18 @@
            (slot-index (list-position slot (standard-class.slots class))))
       (vector-set! instance (+ slot-index 1) new-val))))
 
+(define slot-value-m
+  (lambda (instance slot)
+    (let* ((class (class-of1 instance))
+           (slot-index (list-position slot (vector-ref class 1))))
+      (vector-ref instance (+ slot-index 1)))))
+
+(define set!slot-value-m
+  (lambda (instance slot new-val)
+    (let* ((class (class-of1 instance))
+           (slot-index (list-position slot (vector-ref class 1))))
+      (vector-set! instance (+ slot-index 1) new-val))))
+
 ; Remove duplicates from list
 (define delete-duplicates
   (lambda (s)
@@ -284,10 +304,35 @@
      'method-vector
        method-vector)))
 
+(define create-class-object-proc
+  (lambda (direct-superclasses slots method-names method-vector)
+
+    ; List of superclasses without duplicates
+    (let ((class-precedence-list
+           (delete-duplicates
+             (append-map (lambda (c) (vector-ref c 2)) direct-superclasses))))
+      (send 'make-instance standard-class
+            'class-precedence-list class-precedence-list
+            'slots
+            (delete-duplicates
+             (append slots (append-map (lambda (c) (vector-ref c 1)) class-precedence-list)))
+            'method-names method-names
+            'method-vector method-vector))))
+
+; Macro to create classes with single inheritance
 (define-macro create-class
   (lambda (superclass slots . methods)
     `(create-class-proc
       ,superclass
+      (list ,@(map (lambda (slot) `',slot) slots))
+      (list ,@(map (lambda (method) `',(car method)) methods))
+      (vector ,@(map (lambda (method) `,(cadr method)) methods)))))
+
+; Macro to create classes with multiple inheritance
+(define-macro create-class-object
+  (lambda (direct-superclasses slots . methods)
+    `(create-class-object-proc
+      (list ,@(map (lambda (su) `,su) direct-superclasses))
       (list ,@(map (lambda (slot) `',slot) slots))
       (list ,@(map (lambda (method) `',(car method)) methods))
       (vector ,@(map (lambda (method) `,(cadr method)) methods)))))
@@ -327,7 +372,20 @@
               ; Skip 2 processed elements
               (loop (cddr slot-value-twosomes))))))))
 
-; Call method on object / Send message to object
+(define make-instance-object
+  (lambda (class . slot-value-twosomes)
+    (let* ((slotlist (vector-ref class 1))
+           (n (length slotlist))
+           (instance (make-vector (+ n 1))))
+      (vector-set! instance 0 class)
+      (let loop ((slot-value-twosomes slot-value-twosomes))
+        (if (null? slot-value-twosomes)
+            instance
+            (let ((k (list-position (car slot-value-twosomes) slotlist)))
+              (vector-set! instance (+ k 1) (cadr slot-value-twosomes))
+              (loop (cddr slot-value-twosomes))))))))
+
+; Call method on object / Send message to object (single inheritance)
 (define send
   (lambda (method instance . args)
     (let ((proc
@@ -350,6 +408,31 @@
                        (loop (standard-class.superclass class))))))))
 
       ; Apply found method
+      (apply proc instance args))))
+
+; Send with multiple inheritance
+(define send-m
+  (lambda (method-name instance . args)
+    (let ((proc (let ((class (class-of1 instance)))
+             (if (eqv? class #t)
+
+                 ; Method not found
+                 (error 'send-ma)
+
+                 ; Start loop with current class and list of superclasses
+                 (let loop ((class class) (superclasses (vector-ref class 2)))
+                   (let ((k (list-position method-name (vector-ref class 3))))
+                     (cond
+
+                       ; Method found in current class
+                       (k (vector-ref (vector-ref class 4) k))
+
+                       ; No more superclasses
+                       ((null? superclasses) (error 'send-mo))
+
+                       ; Check next superclass
+                       (else (loop (car superclasses) (cdr superclasses))))))))))
+
       (apply proc instance args))))
 
 ; Create simple standard class
@@ -403,6 +486,41 @@
                        ((< diff -4) 'too-small)
                        ((> diff 4) 'too-big))))))))
 
+; Class as object
+(define standard-class-object
+  (vector
+
+    ; Placeholder
+    'value-of-standard-class
+
+    ; Slots
+    (list
+      'slots
+      'class-precedence-list
+      'method-names
+      'method-vector)
+
+    ; Class precedence list
+    '()
+
+    ; Method names
+    '(make-instance-object)
+
+    ; Method vector
+    (vector make-instance-object)))
+
+; Class is instance of itself
+(vector-set! standard-class-object 0 standard-class-object)
+
+; Create car class based on standard-class-object
+(define car-class
+  (send-m 'make-instance-object standard-class-object
+    'slots '(name color)
+    'class-precedence-list '()
+    'method-names '(show-name show-color)
+    'method-vector (vector (lambda (me) (display (slot-value me 'name)))
+                           (lambda (me) (display (slot-value me 'color))))))
+
 ; -------------------------------------------------------------------
 
 (define my-bike1
@@ -431,6 +549,8 @@
       'tires 'michelin
       'suspension 'ceriani))
 
+(define my-car (make-instance-object car-class 'name 'volvo 'color 'red))
+
 ; -------------------------------------------------------------------
 
 (begin
@@ -446,6 +566,9 @@
       (eqv? (send 'check-fit my-bike3 32) 'too-big)
       (eqv? (send 'check-fit my-bike3 40) 'fits-well)
       (eqv? (send 'check-fit my-bike3 45) 'perfect-fit)
-      (eqv? (send 'check-fit my-bike3 55) 'too-small)))
+      (eqv? (send 'check-fit my-bike3 55) 'too-small)
+      (eqv? (slot-value-m my-car 'name) 'volvo)
+      (eqv? (slot-value-m my-car 'color) 'red)))
 
   (newline))
+
