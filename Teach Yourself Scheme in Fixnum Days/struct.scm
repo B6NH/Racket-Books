@@ -309,15 +309,26 @@
 
     ; List of superclasses without duplicates
     (let ((class-precedence-list
-           (delete-duplicates
-             (append-map (lambda (c) (vector-ref c 2)) direct-superclasses))))
-      (send 'make-instance standard-class
-            'class-precedence-list class-precedence-list
-            'slots
             (delete-duplicates
-             (append slots (append-map (lambda (c) (vector-ref c 1)) class-precedence-list)))
-            'method-names method-names
-            'method-vector method-vector))))
+              (append
+                direct-superclasses
+                (append-map (lambda (c) (vector-ref c 2)) direct-superclasses)))))
+      (send-m
+        'make-instance-object
+          standard-class-object
+        'class-precedence-list
+          class-precedence-list
+        'slots
+          (delete-duplicates
+            (append
+              slots
+              (append-map
+                (lambda (c) (vector-ref c 1))
+                class-precedence-list)))
+        'method-names
+          method-names
+        'method-vector
+          method-vector))))
 
 ; Macro to create classes with single inheritance
 (define-macro create-class
@@ -421,6 +432,7 @@
 
                  ; Start loop with current class and list of superclasses
                  (let loop ((class class) (superclasses (vector-ref class 2)))
+
                    (let ((k (list-position method-name (vector-ref class 3))))
                      (cond
 
@@ -514,12 +526,43 @@
 
 ; Create car class based on standard-class-object
 (define car-class
-  (send-m 'make-instance-object standard-class-object
-    'slots '(name color)
-    'class-precedence-list '()
-    'method-names '(show-name show-color)
-    'method-vector (vector (lambda (me) (display (slot-value me 'name)))
-                           (lambda (me) (display (slot-value me 'color))))))
+  (create-class-object
+    ()
+    (name color)
+    (show-name
+      (lambda (me)
+        (display (slot-value-m me 'name))))
+    (show-color
+      (lambda (me)
+        (display (slot-value-m me 'color))))))
+
+(define plane-class
+  (create-class-object
+    ()
+    (size)
+    (fly
+      (lambda (me)
+        (display "Flying")))
+    (land
+      (lambda (me)
+        (display "Landing")))))
+
+(define boat-class
+  (create-class-object
+    ()
+    (mass)
+    (sail
+      (lambda (me)
+        (display "Sailing")))))
+
+; Class inheriting from: 'car-class', 'plane-class', 'boat-class'
+(define sub-class
+  (create-class-object
+    (car-class plane-class boat-class)
+    (sub-slot)
+    (do-everything
+      (lambda (me)
+        (display "Doing Everything")))))
 
 ; -------------------------------------------------------------------
 
@@ -549,7 +592,20 @@
       'tires 'michelin
       'suspension 'ceriani))
 
-(define my-car (make-instance-object car-class 'name 'volvo 'color 'red))
+(define my-car
+  (make-instance-object
+    car-class
+      'name 'volvo
+      'color 'red))
+
+(define sub-object
+  (make-instance-object
+    sub-class
+    'name "Viper"
+    'color 'gold
+    'size 'large
+    'mass 500
+    'sub-slot "SubValue"))
 
 ; -------------------------------------------------------------------
 
@@ -558,17 +614,46 @@
   (display "----- Classes -----\n")
 
   (display
+
     (and
+
       (eqv? (send 'check-fit my-bike2 25) 'too-big)
       (eqv? (send 'check-fit my-bike2 32) 'fits-well)
       (eqv? (send 'check-fit my-bike2 36) 'perfect-fit)
       (eqv? (send 'check-fit my-bike2 50) 'too-small)
+
       (eqv? (send 'check-fit my-bike3 32) 'too-big)
       (eqv? (send 'check-fit my-bike3 40) 'fits-well)
       (eqv? (send 'check-fit my-bike3 45) 'perfect-fit)
       (eqv? (send 'check-fit my-bike3 55) 'too-small)
-      (eqv? (slot-value-m my-car 'name) 'volvo)
-      (eqv? (slot-value-m my-car 'color) 'red)))
 
-  (newline))
+      (eqv? (slot-value-m my-car 'name) 'volvo)
+      (eqv? (slot-value-m my-car 'color) 'red)
+
+      (equal? (slot-value-m sub-object 'name) "Viper")
+      (equal? (slot-value-m sub-object 'sub-slot) "SubValue")
+      (eqv? (slot-value-m sub-object 'color) 'gold)
+      (eqv? (slot-value-m sub-object 'size) 'large)
+      (= (slot-value-m sub-object 'mass) 500)))
+
+  (newline)
+
+  (send-m 'show-name my-car) (newline)
+  (send-m 'show-color my-car) (newline)
+
+  (display "Subobject:\n")
+
+  ; Car
+  (send-m 'show-name sub-object) (newline)
+  (send-m 'show-color sub-object) (newline)
+
+  ; Plane
+  (send-m 'fly sub-object) (newline)
+  (send-m 'land sub-object) (newline)
+
+  ; Boat
+  (send-m 'sail sub-object) (newline)
+
+  ; Subobject
+  (send-m 'do-everything sub-object) (newline))
 
