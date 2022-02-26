@@ -31,11 +31,10 @@
     (call/cc
       (lambda (exit)
         (let recur ((s s))
-          (if (null? s)
-              1
-              (if (= (car s) 0)
-                  (exit 0)
-                  (* (car s) (recur (cdr s))))))))))
+          (cond
+            ((null? s) 1)
+            ((= (car s) 0) (exit 0))
+            (else (* (car s) (recur (cdr s))))))))))
 
 ; Flatten nested lists
 (define flatten
@@ -74,18 +73,24 @@
 
 (define same-fringe3?
   (lambda (tree1 tree2)
-    (letrec ((tree-cor-1
-              (make-leaf-gen-cor
-               tree1
-               (lambda (v) (matcher-cor v))))
-             (tree-cor-2
-              (make-leaf-gen-cor
-               tree2
-               (lambda (v) (matcher-cor v))))
-             (matcher-cor
-              (make-matcher-cor
-               (lambda (v) (tree-cor-1 v))
-               (lambda (v) (tree-cor-2 v)))))
+    (letrec
+
+      ; Tree coroutines
+      ((tree-cor-1
+         (make-leaf-gen-cor
+           tree1
+           (lambda (v) (matcher-cor v))))
+       (tree-cor-2
+         (make-leaf-gen-cor
+           tree2
+           (lambda (v) (matcher-cor v))))
+
+       ; Matcher coroutine depends on tree coroutines
+       (matcher-cor
+         (make-matcher-cor
+           (lambda (v) (tree-cor-1 v))
+           (lambda (v) (tree-cor-2 v)))))
+
       (matcher-cor 'start-the-ball-rolling))))
 
 (define tree->generator
@@ -135,22 +140,28 @@
                   (set! caller k)
                   (generate-leaves))))))))
 
+; Create coroutine procedure
 (define-macro coroutine
   (lambda (x . body)
     `(letrec ((+local-control-state
                (lambda (,x) ,@body))
+
+              ; Resume another coroutine with transfer value
               (resume
                (lambda (c v)
                  (call/cc
-                  (lambda (k)
-                    (set! +local-control-state k)
-                    (c v))))))
+                   (lambda (k)
+                     (set! +local-control-state k)
+                     (c v))))))
+
+       ; Return unary function
        (lambda (v)
          (+local-control-state v)))))
 
 (define make-matcher-cor
   (lambda (tree-cor-1 tree-cor-2)
-    (coroutine dummy-init-arg
+    (coroutine
+      dummy-init-arg
       (let loop ()
         (let ((leaf1 (resume tree-cor-1 'get-a-leaf))
               (leaf2 (resume tree-cor-2 'get-a-leaf)))
@@ -160,7 +171,8 @@
 
 (define make-leaf-gen-cor
   (lambda (tree matcher-cor)
-    (coroutine dummy-init-arg
+    (coroutine
+      dummy-init-arg
       (let loop ((tree tree))
         (cond
           ((null? tree) 'skip)
@@ -170,19 +182,57 @@
           (else (resume matcher-cor tree))))
       (resume matcher-cor '()))))
 
+(define make-location-cor
+  (lambda (other-location-cor manager-cor)
+    (coroutine v
+      (let ((num-umbrellas 1))
+        (let loop ((umbrella? (car v))
+                   (walks-so-far (cadr v)))
+          (when umbrella?
+            (set! num-umbrellas (+ num-umbrellas 1)))
+          (cond
+            ((>= walks-so-far *max-num-walks*)
+             (resume manager-cor walks-so-far))
+            ((< (random) *rain-prob*)
+             (cond
+               ((> num-umbrellas 0)
+                (set! num-umbrellas (- num-umbrellas 1))
+                (apply loop
+                  (resume other-location-cor
+                  (list #t (+ walks-so-far 1)))))
+               (else (apply loop (resume manager-cor walks-so-far)))))
+            (else
+              (apply loop (resume other-location-cor (list #f (+ walks-so-far 1)))))))))))
+
+(define make-manager-cor
+  (lambda (home-cor)
+    (coroutine dummy-init-arg
+      (resume home-cor (list #f 0)))))
+
+(define *rain-prob* 0.4)
+(define *max-num-walks* (* 365 2 5)) ; 2 walks per day for 5 years
 
 (begin
   (display
     (and
+
       (equal? (flatten '((1 2) (3 (4 5)) (6) ((7)))) '(1 2 3 4 5 6 7))
+
       (= (list-product1 '(4 2 1 3 5 1)) 120)
       (= (list-product1 '(2 8 0 1 9 6)) 0)
+
       (= (list-product2 '(4 2 6 3 1 5)) 720)
       (= (list-product2 '(7 9 2 0 6 4)) 0)
+
       (same-fringe1? '(1 (2 3)) '((1 2) 3))
       (not (same-fringe1? '(1 2 3) '(1 (3 2))))
-      (same-fringe2? '(1 (2 (3))) '((1 (2)) 3))))
+
+      (same-fringe2? '(1 (2 (3))) '((1 (2)) 3))
       (not (same-fringe2? '(6 (7 (4) 1) 2) '((4 5) 3 6 (1))))
+
+      (same-fringe3? '(((8 1) 5) ((4) 2)) '((8 (1 5) 4 2)))
+      (not (same-fringe3? '(7 1 4 3 1) '((1 (4 3)) (2 9))))))
+
   (newline))
 
 
