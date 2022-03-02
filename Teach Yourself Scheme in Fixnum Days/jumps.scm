@@ -114,7 +114,11 @@
 
                   ; Continue loop
                   ((pair? tree)
+
+                   ; Process first element
                    (loop (car tree))
+
+                   ; Process rest of tree
                    (loop (cdr tree)))
 
                   ; Leaf
@@ -137,7 +141,11 @@
             (lambda ()
               (call/cc
                 (lambda (k)
+
+                  ; Save current continuation in caller
                   (set! caller k)
+
+                  ; Call function to generate leaf
                   (generate-leaves))))))))
 
 ; Create coroutine procedure
