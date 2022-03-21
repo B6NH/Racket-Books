@@ -91,6 +91,7 @@
            (lambda (v) (tree-cor-1 v))
            (lambda (v) (tree-cor-2 v)))))
 
+      ; Call matcher coroutine
       (matcher-cor 'start-the-ball-rolling))))
 
 (define tree->generator
@@ -154,15 +155,20 @@
     `(letrec ((+local-control-state
                (lambda (,x) ,@body))
 
-              ; Resume another coroutine with transfer value
+              ; Resume another coroutine (c) with transfer value (v)
               (resume
                (lambda (c v)
                  (call/cc
                    (lambda (k)
+
+                     ; Save continuation
                      (set! +local-control-state k)
+
+                     ; Resume coroutine
                      (c v))))))
 
        ; Return unary function
+       ; Local control state is initially entire coroutine computation
        (lambda (v)
          (+local-control-state v)))))
 
@@ -171,8 +177,12 @@
     (coroutine
       dummy-init-arg
       (let loop ()
+
+        ; Get leaves from tree coroutines
         (let ((leaf1 (resume tree-cor-1 'get-a-leaf))
               (leaf2 (resume tree-cor-2 'get-a-leaf)))
+
+          ; Compare leaves
           (if (eqv? leaf1 leaf2)
               (if (null? leaf1) #t (loop))
               #f))))))
@@ -187,7 +197,10 @@
           ((pair? tree)
            (loop (car tree))
            (loop (cdr tree)))
+
+          ; Resume matcher coroutine with leaf argument
           (else (resume matcher-cor tree))))
+
       (resume matcher-cor '()))))
 
 (define make-location-cor
