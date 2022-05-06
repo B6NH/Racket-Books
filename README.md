@@ -1,4 +1,4 @@
-# Racket-Books
+# ![Logo](https://i.imgur.com/TuVeWMm.png)
 
 Racket/Scheme exercises from 3 books
 * [How to Design Programs](How%20to%20Design%20Programs)
