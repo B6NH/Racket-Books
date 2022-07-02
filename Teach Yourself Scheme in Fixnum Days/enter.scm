@@ -29,7 +29,7 @@
       (not (eqv? 'Calorie 'calorie)) (eqv? def #\m)
       (eqv? (string-ref string2 3) #\e)
       (string=? (string-append "abc" "def") "abcdef")
-      (vector? vector2) (equal? vector1 #(0 1 15 3 4 5))
+      (vector? vector2) (equal? vector1 (vector 0 1 15 3 4 5))
       (= (car dpair1) 5) (= (cdr dpair2) 7) (= (cdar dpair3) 2)
       (equal? dpair4 (list 1 2 3 4)) (= (list-ref dpair4 2) 3)
       (equal? (list-tail dpair4 2) '(3 4)) (null? '())

@@ -17,13 +17,22 @@
            (+ 2 (k 3))))))
 (newline)
 
-; Multiply list of numbers
+; Multiply list of numbers (named let)
 (define list-product1
-  (lambda (s)
-    (let recur ((s s))
-      (if (null? s)
+  (lambda (init-val)
+    (let recur ((arg init-val))
+      (if (null? arg)
           1
-          (* (car s) (recur (cdr s)))))))
+          (* (car arg) (recur (cdr arg)))))))
+
+; Named let as letrec
+(define list-product11
+  (lambda (init-val)
+    (letrec ((recur (lambda (arg)
+                      (if (null? arg)
+                          1
+                          (* (car arg) (recur (cdr arg)))))))
+      (recur init-val))))
 
 ; Use continuation to quit function when number 0 is encountered
 (define list-product2
@@ -32,8 +41,14 @@
       (lambda (exit)
         (let recur ((s s))
           (cond
+
+            ; End of list
             ((null? s) 1)
+
+            ; Return zero immediately
             ((= (car s) 0) (exit 0))
+
+            ; Continue multiplication
             (else (* (car s) (recur (cdr s))))))))))
 
 ; Flatten nested lists
@@ -53,10 +68,18 @@
     (let loop ((ftree1 (flatten tree1))
                (ftree2 (flatten tree2)))
       (cond
+
+        ; Two empty trees
         ((and (null? ftree1) (null? ftree2)) #t)
+
+        ; One of trees is non-empty
         ((or (null? ftree1) (null? ftree2)) #f)
+
+        ; Continue loop
         ((eqv? (car ftree1) (car ftree2))
          (loop (cdr ftree1) (cdr ftree2)))
+
+        ; Elements differ
         (else #f)))))
 
 ; Compare all leaves using generators
@@ -241,6 +264,9 @@
 
       (= (list-product1 '(4 2 1 3 5 1)) 120)
       (= (list-product1 '(2 8 0 1 9 6)) 0)
+
+      (= (list-product11 '(7 4 2 8 6 5)) 13440)
+      (= (list-product11 '(9 2 0 8 7 1)) 0)
 
       (= (list-product2 '(4 2 6 3 1 5)) 720)
       (= (list-product2 '(7 9 2 0 6 4)) 0)
