@@ -1,3 +1,4 @@
+(include "helper/macros.scm")
 
 ; Lexical Variables & Recursion
 
@@ -31,6 +32,13 @@
 (define globalEffect
   (lambda ()
     (let ((c 99))
+      (display (incC)) (newline)
+      (display (incC)) (newline)
+      (display (incC)) (newline))))
+
+(define localEffect
+  (lambda ()
+    (fluid-let ((c 200)) ; temporarily set global c to 200
       (display (incC)) (newline)
       (display (incC)) (newline)
       (display (incC)) (newline))))
@@ -111,6 +119,7 @@
   (set! x 10)
   (incC)(incC)
   (globalEffect)
+  (localEffect)
   (display (string-append "Random: "
     (number->string (random-integer 100))))
   (newline)

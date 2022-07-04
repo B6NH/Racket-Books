@@ -1,3 +1,4 @@
+(include "helper/macros.scm")
 
 ; Forms & Conditionals
 
@@ -68,11 +69,11 @@
       (equal? (manyArgs 5 6 7 8 9) '(7 8 9))
       (equal? (apply * someArgs) 210)
       (equal? (apply * 2 3 someArgs) (* 2 3 5 6 7))
-      (= (implicitBegin 3 2 1) 8)
+      (= (implicitBegin 3 2 1) 8) ; 123
       (eqv? (ifTest 55) 'safe)
       (eqv? (noElse 25) 'good)
-      (= (implicitBeginWhen 15) 1)
-      (= (implicitBeginUnless 30) 2)
+      (= (implicitBeginWhen 15) 1) ; 456
+      (= (implicitBeginUnless 30) 2) ; 789
       (equal? (condForm 6) 'six)
       (equal? (caseForm 8) 'eight)
       (andOrForm 10 15)))
