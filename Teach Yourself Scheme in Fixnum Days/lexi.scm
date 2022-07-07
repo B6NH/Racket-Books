@@ -47,14 +47,20 @@
   (lambda ()
     (ceiling (* (random-real) 6))))
 
+(define throw-two-dice
+  (lambda ()
+    (+ (throw-die) (throw-die))))
+
 (define is-even?
   (lambda (n)
-    (if (= n 0) #t
+    (if (= n 0)
+        #t
         (is-odd? (- n 1)))))
 
 (define is-odd?
   (lambda (n)
-    (if (= n 0) #f
+    (if (= n 0)
+        #f
         (is-even? (- n 1)))))
 
 (define letRecOddEven
@@ -62,9 +68,9 @@
     (letrec ((local-even?
               (lambda (n)
                 (if (= n 0) #t (local-odd? (- n 1)))))
-            (local-odd?
-              (lambda (n)
-                (if (= n 0) #f (local-even? (- n 1))))))
+             (local-odd?
+               (lambda (n)
+                 (if (= n 0) #f (local-even? (- n 1))))))
       (list (local-even? 23) (local-odd? 23)))))
 
 (define letRecLoop
@@ -82,7 +88,7 @@
 
 (define namedLet
   (lambda ()
-    (let countdown ((i 3))
+    (let countdown ((i 3)) ; initialization
       (if (= i 0)
           'liftoff
           (begin
@@ -100,20 +106,45 @@
 
 (define reverse!
   (lambda (s)
+
+    ; Initially, r is empty list
     (let loop ((s s) (r '()))
+
+      ; Return inverted list
       (if (null? s)
           r
+
+          ; Save value of (cdr s), which in next iteration will become new s
           (let ((d (cdr s)))
+
+            ; Variable s becomes new r with old r as cdr
+            ; '(1 2 3) '() -> '(1),
+            ; '(2 3) '(1) -> '(2 1),
+            ; '(3) '(2 1) -> '(3 2 1)
             (set-cdr! s r)
+
+            ; Loop with d as new s and s as new r
             (loop d s))))))
 
 (define forE
   (lambda ()
-    (for-each (lambda (y z) (display (+ y z)))
-      '(1 2 3) '(4 5 6))))
+    (for-each
+      (lambda (y z) (display (+ y z)))
+      '(1 2 3)
+      '(4 5 6))))
 
 (define x 5)
 (define c 0)
+
+(define *num-trials* 20000)
+
+; Calculate average value returned by 'experiment' function
+(define monte-carlo
+  (lambda (experiment)
+    (let loop ((i 0) (acc 0.0))
+      (if (= i *num-trials*)
+          (/ acc *num-trials*)
+          (loop (+ i 1) (+ acc (experiment)))))))
 
 (begin
   (set! x 10)
@@ -130,6 +161,10 @@
   (namedLet)
   (for-each display (list "One " "Two " "Three\n"))
   (forE)
+  (newline)
+  (display (monte-carlo throw-die))
+  (newline)
+  (display (monte-carlo throw-two-dice))
   (newline)
   (display
     (and (= x 10)
