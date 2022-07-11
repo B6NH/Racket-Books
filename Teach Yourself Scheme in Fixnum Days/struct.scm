@@ -453,7 +453,7 @@
     'superclass #t
     'slots '(frame parts size)
     'method-names '()
-    'method-vector #()))
+    'method-vector (make-vector 0)))
 
 ; Create class using 'create-class' macro
 (define bike-class

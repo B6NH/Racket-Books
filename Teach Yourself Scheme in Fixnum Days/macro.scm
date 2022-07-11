@@ -8,6 +8,10 @@
 (define d 100)
 (define e 0)
 
+; Macro template
+; Comma inserts result of evaluating expression
+; Comma-splice inserts result of evaluating
+; expression after removing outermost parentheses
 (define-macro my-when2
   (lambda (test . branch)
     `(if ,test (begin ,@branch))))
@@ -16,15 +20,18 @@
   (lambda (test . branch)
     (cons 'when (cons (list 'not test) branch))))
 
+; Double evaluation
 (define-macro my-or1
   (lambda (x y)
     `(if ,x ,x ,y)))
 
+; Single evaluation
 (define-macro my-or2
   (lambda (x y)
     `(let ((temp ,x))
        (if temp temp ,y))))
 
+; Generate unique identifier for variable x
 (define-macro my-or3
   (lambda (x y)
     (let ((temp (gensym)))
