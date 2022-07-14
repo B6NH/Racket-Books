@@ -8,7 +8,9 @@
     (let ((l (read-line p)))
       (if (not (eof-object? l))
           (begin
-            (display (string-append "  " l)) (newline) (show-all-helper p))))))
+            (display (string-append "  " l))
+            (newline)
+            (show-all-helper p))))))
 
 (define show-all-files
   (lambda ()
@@ -38,5 +40,8 @@
 
   (display (not (file-exists? file-name))) (newline)
 
+  (display (string-append "USER: " (getenv "USER"))) (newline)
+  (display (string-append "DISPLAY: " (getenv "DISPLAY"))) (newline)
   (display (string-append "HOME: " (getenv "HOME"))) (newline)
   (display (string-append "SHELL: " (getenv "SHELL"))) (newline))
+
