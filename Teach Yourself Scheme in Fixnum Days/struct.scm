@@ -220,13 +220,16 @@
     (vector-ref instance 0)))
 
 ; Return class of any Scheme object
+; Default object class is #t
 (define class-of2
   (lambda (x)
     (if (vector? x)
         (let ((n (vector-length x)))
           (if (>= n 1)
               (let ((c (vector-ref x 0)))
-                (if (standard-class? c) c #t))
+                (if (standard-class? c)
+                    c
+                    #t))
               #t))
         #t)))
 
@@ -630,22 +633,22 @@
 
   (newline)
 
-  (send-m 'show-name my-car) (newline)
-  (send-m 'show-color my-car) (newline)
+  (send-m 'show-name my-car) (newline) ; volvo
+  (send-m 'show-color my-car) (newline) ; red
 
   (display "Subobject:\n")
 
   ; Car
-  (send-m 'show-name sub-object) (newline)
-  (send-m 'show-color sub-object) (newline)
+  (send-m 'show-name sub-object) (newline) ; Viper
+  (send-m 'show-color sub-object) (newline) ; gold
 
   ; Plane
-  (send-m 'fly sub-object) (newline)
-  (send-m 'land sub-object) (newline)
+  (send-m 'fly sub-object) (newline) ; Flying
+  (send-m 'land sub-object) (newline) ; Landing
 
   ; Boat
-  (send-m 'sail sub-object) (newline)
+  (send-m 'sail sub-object) (newline) ; Sailing
 
   ; Subobject
-  (send-m 'do-everything sub-object) (newline))
+  (send-m 'do-everything sub-object) (newline)) ; Doing Everything
 

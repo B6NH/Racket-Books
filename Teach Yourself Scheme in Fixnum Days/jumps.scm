@@ -1,3 +1,6 @@
+(include "helper/macros.scm")
+(include "helper/functions.scm")
+(random-source-randomize! default-random-source)
 
 ; Jumps
 
@@ -226,28 +229,49 @@
 
       (resume matcher-cor '()))))
 
+; Create location coroutine
+; Walk between home and work until you get wet
+; or if maximum number of walks has been reached
 (define make-location-cor
   (lambda (other-location-cor manager-cor)
     (coroutine v
+
+      ; Each location starts with one umbrella
       (let ((num-umbrellas 1))
-        (let loop ((umbrella? (car v))
-                   (walks-so-far (cadr v)))
+        (let loop ((umbrella? (car v)) ; did umbrella arrive during last walk
+                   (walks-so-far (cadr v))) ; number of walks
+
+          ; Increase umbrella count
           (when umbrella?
             (set! num-umbrellas (+ num-umbrellas 1)))
+
           (cond
+
+            ; Return result to manager coroutine
             ((>= walks-so-far *max-num-walks*)
              (resume manager-cor walks-so-far))
-            ((< (random) *rain-prob*)
+
+            ; Raining
+            ((< (random-real) *rain-prob*)
              (cond
+
+               ; Take umbrella
                ((> num-umbrellas 0)
                 (set! num-umbrellas (- num-umbrellas 1))
                 (apply loop
-                  (resume other-location-cor
-                  (list #t (+ walks-so-far 1)))))
-               (else (apply loop (resume manager-cor walks-so-far)))))
-            (else
-              (apply loop (resume other-location-cor (list #f (+ walks-so-far 1)))))))))))
+                  (resume other-location-cor (list #t (+ walks-so-far 1)))))
 
+               ; No umbrellas
+               ; Resume to manager coroutine
+               (else (apply loop
+                       (resume manager-cor walks-so-far)))))
+
+            ; Not raining
+            (else
+              (apply loop
+                (resume other-location-cor (list #f (+ walks-so-far 1)))))))))))
+
+; Start at home and wait for response from one of the locations
 (define make-manager-cor
   (lambda (home-cor)
     (coroutine dummy-init-arg
@@ -255,6 +279,27 @@
 
 (define *rain-prob* 0.4)
 (define *max-num-walks* (* 365 2 5)) ; 2 walks per day for 5 years
+(define *num-trials* 5000)
+(define wa "Wet after ")
+(define da " days")
+
+(define umbrella-trial
+  (lambda (rain-prob)
+    (lambda ()
+      (when (number? rain-prob) (set! *rain-prob* rain-prob))
+
+        ; Create coroutines
+        (letrec ((home-cor (make-location-cor
+                             (lambda (v) (office-cor v))
+                              (lambda (v) (manager-cor v))))
+                 (office-cor (make-location-cor
+                               (lambda (v) (home-cor v))
+                               (lambda (v) (manager-cor v))))
+                 (manager-cor (make-manager-cor
+                                (lambda (v) (home-cor v)))))
+
+                ; Start trial
+                (manager-cor 'start-the-ball-rolling)))))
 
 (begin
   (display
@@ -280,6 +325,19 @@
       (same-fringe3? '(((8 1) 5) ((4) 2)) '((8 (1 5) 4 2)))
       (not (same-fringe3? '(7 1 4 3 1) '((1 (4 3)) (2 9))))))
 
+  (newline)
+  (display
+    (string-append
+      wa
+      (number->string ((umbrella-trial *rain-prob*)))
+      da))
+
+  (newline)
+
+  (display
+    (string-append
+      wa
+      (number->string (monte-carlo (umbrella-trial *rain-prob*)))
+      da " (average)"))
+
   (newline))
-
-

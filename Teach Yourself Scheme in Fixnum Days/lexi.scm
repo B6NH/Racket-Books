@@ -131,14 +131,6 @@
 
 (define *num-trials* 20000)
 
-; Calculate average value returned by 'experiment' function
-(define monte-carlo
-  (lambda (experiment)
-    (let loop ((i 0) (acc 0.0))
-      (if (= i *num-trials*)
-          (/ acc *num-trials*)
-          (loop (+ i 1) (+ acc (experiment)))))))
-
 (begin
   (set! x 10)
   (incC)(incC)

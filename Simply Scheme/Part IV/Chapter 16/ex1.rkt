@@ -13,6 +13,7 @@
 (define (match-using-known-values pattern sent known-values)
   (cond
 
+    ;; Return database
     ;; If the pattern is empty, the sentence should also be empty
     ((empty? pattern)
      (if (empty? sent) known-values 'failed))
@@ -49,43 +50,49 @@
 ;; Match special symbol
 (define (match-special howmany name pattern-rest sent known-values)
 
-  ;; Get placeholder value
-  (let ((old-value (lookup name known-values)))
-    (cond
+  (if (and (not (empty? name))
+           (number? (first name)))
 
-      ;; Value already known
-      ((not (equal? old-value 'no-value))
+      ;; Placeholder of the form *15x
+      (match-n-words name pattern-rest sent known-values)
 
-       ;; Check if old-value size is consistent with howmany size
-       (if (length-ok? old-value howmany)
+      ;; Get placeholder value
+      (let ((old-value (lookup name known-values)))
+        (cond
 
-        ;; Match with known value
-        (already-known-match
-          old-value pattern-rest sent known-values)
+          ;; Value already known
+          ((not (equal? old-value 'no-value))
 
-        ;; Fail
-        'failed))
+          ;; Check if old-value size is consistent with howmany size
+          (if (length-ok? old-value howmany)
 
-      ;; Match all symbols using the same function with different parameters
-      ((equal? howmany '?)
+            ;; Match with known value
+            (already-known-match
+              old-value pattern-rest sent known-values)
 
-        ;; No min, max
-        (longest-match name pattern-rest sent 0 #t known-values))
+            ;; Fail
+            'failed))
 
-      ((equal? howmany '!)
+          ;; Match all symbols using the same function with different parameters
+          ((equal? howmany '?)
 
-        ;; Min, max
-        (longest-match name pattern-rest sent 1 #t known-values))
+            ;; No min, max
+            (longest-match name pattern-rest sent 0 #t known-values))
 
-      ((equal? howmany '*)
+          ((equal? howmany '!)
 
-        ;; No min, no max
-        (longest-match name pattern-rest sent 0 #f known-values))
+            ;; Min, max
+            (longest-match name pattern-rest sent 1 #t known-values))
 
-      ((equal? howmany '&)
+          ((equal? howmany '*)
 
-        ;; Min, no max
-        (longest-match name pattern-rest sent 1 #f known-values)))))
+            ;; No min, no max
+            (longest-match name pattern-rest sent 0 #f known-values))
+
+          ((equal? howmany '&)
+
+            ;; Min, no max
+            (longest-match name pattern-rest sent 1 #f known-values))))))
 
 ;; Check pattern size consistency
 (define (length-ok? value howmany)
@@ -159,8 +166,11 @@
       (lm-helper
         name
         pattern-rest
+
+        ;; Start with one word
         (se (first sent)) ;; one matched word (sentence is not empty, look above!)
         (bf sent) ;; unmatched words
+
         min
         known-values))
 
@@ -171,8 +181,11 @@
       (lm-helper
         name
         pattern-rest
+
+        ;; Start with whole sentence
         sent ;; all words matched
         '() ;; no remaining words
+
         min
         known-values))))
 
@@ -237,6 +250,32 @@
   (if (empty? name)
       known-values
       (se known-values name value '!)))
+
+; ------------------------------------------------------
+
+; Exercise functions
+
+(define (empty-or-not-number p)
+  (or (empty? p) (not (number? (first p)))))
+
+(define (get-number p)
+  (if (empty-or-not-number p)
+      ""
+      (word (first p) (get-number (bf p)))))
+
+(define (skip-number p)
+  (if (empty-or-not-number p)
+    p
+    (skip-number (bf p))))
+
+(define (match-n-words name pattern-rest sent known-values)
+  (let ((num (get-number name)))
+    (if (>= (length sent) num)
+        (match-using-known-values
+          pattern-rest
+          (drop sent num)
+          (add (skip-number name) (take sent num) known-values))
+        'failed)))
 
 ; ------------------------------------------------------
 
@@ -335,5 +374,18 @@
 
   ;; Add
   (equal? (add 'neuroframe '(the wrath of code) db1)
-         '(x mega drive ! y water ! neuroframe the wrath of code !)))
+         '(x mega drive ! y water ! neuroframe the wrath of code !))
 
+  ; Get number of words
+  (equal? (get-number '3front) 3)
+  (equal? (get-number '25back) 25)
+  (equal? (get-number '9) 9)
+
+  ; Skip number part of placeholder
+  (equal? (skip-number '5canary) 'canary)
+  (equal? (skip-number '123crocodile) 'crocodile)
+  (equal? (skip-number '515) "")
+
+  ; Match n words
+  (equal? (match '(*3front *back) '(your mother should know))
+          '(front your mother should ! back know !)))
