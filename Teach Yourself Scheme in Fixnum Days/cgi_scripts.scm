@@ -1,3 +1,4 @@
+(include "helper/macros.scm")
 
 ; CGI scripts
 
@@ -27,30 +28,30 @@
 ;; (for-each
 ;;  (lambda (env-var)
 ;;    (display env-var)
-;;    (display " = "")
-;;    (display (or (getenv env-var) """))
+;;    (display " = ")
+;;    (display (or (getenv env-var) ""))
 ;;    (newline))
-;;  '("AUTH_TYPE""
-;;    "CONTENT_LENGTH""
-;;    "CONTENT_TYPE""
-;;    "DOCUMENT_ROOT""
-;;    "GATEWAY_INTERFACE""
-;;    "HTTP_ACCEPT""
-;;    "HTTP_REFERER"" ; [sic]
-;;    "HTTP_USER_AGENT""
-;;    "PATH_INFO""
-;;    "PATH_TRANSLATED""
-;;    "QUERY_STRING""
-;;    "REMOTE_ADDR""
-;;    "REMOTE_HOST""
-;;    "REMOTE_IDENT""
-;;    "REMOTE_USER""
-;;    "REQUEST_METHOD""
-;;    "SCRIPT_NAME""
-;;    "SERVER_NAME""
-;;    "SERVER_PORT""
-;;    "SERVER_PROTOCOL""
-;;    "SERVER_SOFTWARE""))
+;;  '("AUTH_TYPE"
+;;    "CONTENT_LENGTH"
+;;    "CONTENT_TYPE"
+;;    "DOCUMENT_ROOT"
+;;    "GATEWAY_INTERFACE"
+;;    "HTTP_ACCEPT"
+;;    "HTTP_REFERER" ; [sic]
+;;    "HTTP_USER_AGENT"
+;;    "PATH_INFO"
+;;    "PATH_TRANSLATED"
+;;    "QUERY_STRING"
+;;    "REMOTE_ADDR"
+;;    "REMOTE_HOST"
+;;    "REMOTE_IDENT"
+;;    "REMOTE_USER"
+;;    "REQUEST_METHOD"
+;;    "SCRIPT_NAME"
+;;    "SERVER_NAME"
+;;    "SERVER_PORT"
+;;    "SERVER_PROTOCOL"
+;;    "SERVER_SOFTWARE"))
 
 ; -------------------------------------------------------------
 
@@ -112,12 +113,12 @@
 ;; (define args
 ;;   (map (lambda (par-arg)
 ;;          (split #\= par-arg))
-;;        (split #\& (getenv "QUERY_STRING""))))
+;;        (split #\& (getenv "QUERY_STRING"))))
 ;;
-;; (define envvar (cadr (assoc "envvar"" args)))
+;; (define envvar (cadr (assoc "envvar" args)))
 ;;
 ;; (display envvar)
-;; (display " = "")
+;; (display " = ")
 ;; (display (getenv envvar))
 ;;
 ;; (newline)
@@ -131,9 +132,9 @@
 ;;
 ;; ; Load the cgi utilities
 ;;
-;; (load-relatve "cgi.scm"")
+;; (load-relatve "cgi.scm")
 ;;
-;; (display "content-type: text/plain"") (newline)
+;; (display "content-type: text/plain") (newline)
 ;; (newline)
 ;;
 ;; ; Read the data input via the form
@@ -147,7 +148,7 @@
 ;; ; Display the value of the envvar
 ;;
 ;; (display envvar)
-;; (display " = "")
+;; (display " = ")
 ;; (display (getenv envvar))
 ;; (newline)
 
@@ -157,7 +158,7 @@
 
 ;; ; Load our table definitions
 ;;
-;; (load-relative "table.scm"")
+;; (load-relative "table.scm")
 ;;
 ;; ; Define the *form-data-table*
 ;;
@@ -314,7 +315,7 @@
 ;; ":"";exec /usr/local/bin/mzscheme -r $0
 ;;
 ;; ;Load the CGI utilities
-;; (load-relative "cgi.scm"")
+;; (load-relative "cgi.scm")
 ;;
 ;; (define uhoh #f)
 ;;
@@ -333,23 +334,23 @@
 ;;       ((*) *)
 ;;       ((/) /)
 ;;       ((**) expt)
-;;       (else (uhoh "unpermitted operator"")))))
+;;       (else (uhoh "unpermitted operator")))))
 ;;
 ;; (define ensure-number
 ;;   (lambda (e)
 ;;     (if (number? e) e
-;;         (uhoh "non-number""))))
+;;         (uhoh "non-number"))))
 ;;
 ;; (define print-form
 ;;   (lambda ()
-;;     (display "<form action=\""")
-;;     (display (getenv "SCRIPT_NAME""))
+;;     (display "<form action=\"")
+;;     (display (getenv "SCRIPT_NAME"))
 ;;     (display "\">
 ;;   Enter arithmetic expression:<br>
 ;;   <input type=textarea name=arithexp><p>
 ;;   <input type=submit value=\"Evaluate\">
 ;;   <input type=reset value=\"Clear\">
-;; </form>"")))
+;; </form>")))
 ;;
 ;; (define print-page-begin
 ;;   (lambda ()
@@ -359,32 +360,32 @@
 ;;   <head>
 ;;     <title>A Scheme Calculator</title>
 ;;   </head>
-;;   <body>"")))
+;;   <body>")))
 ;;
 ;; (define print-page-end
 ;;   (lambda ()
 ;;     (display "</body>
-;; </html>"")))
+;; </html>")))
 ;;
 ;; (parse-form-data)
 ;;
 ;; (print-page-begin)
 ;;
-;; (let ((e (form-data-get "arithexp"")))
+;; (let ((e (form-data-get "arithexp")))
 ;;   (unless (null? e)
 ;;     (let ((e1 (car e)))
 ;;       (display-html e1)
 ;;       (display "<p>
-;;   =&gt;&nbsp;&nbsp;"")
+;;   =&gt;&nbsp;&nbsp;")
 ;;       (display-html
 ;;        (call/cc
 ;;         (lambda (k)
 ;;           (set! uhoh
 ;;                 (lambda (s)
-;;                   (k (string-append "Error: "" s))))
+;;                   (k (string-append "Error: " s))))
 ;;           (number->string
 ;;            (calc-eval (read (open-input-string (car e))))))))
-;;       (display "<p>""))))
+;;       (display "<p>"))))
 ;;
 ;; (print-form)
 ;; (print-page-end)
