@@ -56,7 +56,7 @@
 ;;
 ;; (define copy-to-floppy-sized-subfile
 ;;   (lambda (i subfile-prefix n)
-;;     (let ((nth-subfile (string-append subfile-prefix ".""
+;;     (let ((nth-subfile (string-append subfile-prefix "."
 ;;                                       (number->string n))))
 ;;       (if (file-exists? nth-subfile) (delete-file nth-subfile))
 ;;       (call-with-output-file nth-subfile
@@ -88,3 +88,4 @@
 ; -------------------------------------------------------------
 
 (display #t) (newline)
+
