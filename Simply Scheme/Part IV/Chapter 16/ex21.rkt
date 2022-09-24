@@ -2,6 +2,6 @@
 
 #lang racket
 
-; Only a number
+; Solution in file ex1.rkt
 
 #t

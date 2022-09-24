@@ -2,6 +2,7 @@
 
 #lang racket
 
-; In function match
+; Database is created in function 'match'
+; Initially it is empty list
 
 #t

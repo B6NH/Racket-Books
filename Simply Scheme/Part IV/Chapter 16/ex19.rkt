@@ -2,6 +2,7 @@
 
 #lang racket
 
-; This would create a problem
+; Example returns incorrect result
+; Instead of treating '!' character as separator, list of lists can be used
 
 #t

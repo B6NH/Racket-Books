@@ -2,6 +2,9 @@
 
 #lang racket
 
-; Ok
+; Example: (match '() '(a b c))
+
+; Original version - 'failed
+; New version - '()
 
 #t

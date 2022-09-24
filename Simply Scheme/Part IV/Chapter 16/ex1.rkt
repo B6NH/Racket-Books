@@ -18,6 +18,9 @@
     ((empty? pattern)
      (if (empty? sent) known-values 'failed))
 
+    ;; Exercise 16.9
+    ;((empty? pattern) known-values)
+
     ;; First element in pattern is special symbol
     ((special? (first pattern))
 
@@ -45,54 +48,63 @@
 
 ;; Check special symbol
 (define (special? wd)
-  (member? (first wd) '(* & ? !)))
+  (member? (first wd) '(* & ? ! +)))
 
 ;; Match special symbol
 (define (match-special howmany name pattern-rest sent known-values)
 
-  (if (and (not (empty? name))
-           (number? (first name)))
+  (if (not-empty-and-number name)
 
       ;; Placeholder of the form *15x
       (match-n-words name pattern-rest sent known-values)
 
       ;; Get placeholder value
       (let ((old-value (lookup name known-values)))
+
         (cond
 
           ;; Value already known
           ((not (equal? old-value 'no-value))
 
-          ;; Check if old-value size is consistent with howmany size
-          (if (length-ok? old-value howmany)
+           ;; Check if old-value size is consistent with howmany size
+           ;; Comment out for exercise 18 (3)
+           (if (length-ok? old-value howmany)
 
-            ;; Match with known value
-            (already-known-match
-              old-value pattern-rest sent known-values)
+               ;; Match with known value
+               (already-known-match
+                 old-value pattern-rest sent known-values)
 
-            ;; Fail
-            'failed))
+               ;; Fail
+               'failed))
 
           ;; Match all symbols using the same function with different parameters
           ((equal? howmany '?)
 
-            ;; No min, max
-            (longest-match name pattern-rest sent 0 #t known-values))
+           ;; No min, max
+           (longest-match name pattern-rest sent 0 #t known-values))
 
           ((equal? howmany '!)
 
-            ;; Min, max
-            (longest-match name pattern-rest sent 1 #t known-values))
+           ;; Min, max
+           (longest-match name pattern-rest sent 1 #t known-values))
 
           ((equal? howmany '*)
 
-            ;; No min, no max
-            (longest-match name pattern-rest sent 0 #f known-values))
+           ;; No min, no max
+           (longest-match name pattern-rest sent 0 #f known-values))
 
           ((equal? howmany '&)
 
-            ;; Min, no max
-            (longest-match name pattern-rest sent 1 #f known-values))))))
+           ;; Min, no max
+           (longest-match name pattern-rest sent 1 #f known-values))
+
+          ((equal? howmany '+)
+           (if (not-empty-and-number sent)
+               (match-using-known-values
+                 pattern-rest
+                 (bf sent)
+                 (add name (first sent) known-values))
+               'failed))))))
 
 ;; Check pattern size consistency
 (define (length-ok? value howmany)
@@ -110,10 +122,14 @@
 (define (already-known-match value pattern-rest sent known-values)
 
   ;; Remove matching part of sentence
+  ;; Replace with chop-leading-substring2 for exercise 18 (1)
   (let ((unmatched (chop-leading-substring value sent)))
 
     ;; Check match
     (if (not (equal? unmatched 'failed))
+
+        ;; Return known-values in exercise 18 (2)
+        ;; known-values
 
         ;; Continue after successful match
         (match-using-known-values
@@ -121,6 +137,12 @@
 
         ;; Return 'failed
         'failed)))
+
+;; Function for exercise 18
+(define (chop-leading-substring2 value sent)
+  (if (or (empty? value) (empty? sent))
+      sent
+      (chop-leading-substring2 (bf value) (bf sent))))
 
 ;; Remove value from sentence
 (define (chop-leading-substring value sent)
@@ -255,18 +277,19 @@
 
 ; Exercise functions
 
-(define (empty-or-not-number p)
-  (or (empty? p) (not (number? (first p)))))
+(define (not-empty-and-number p)
+  (and (not (empty? p))
+       (number? (first p))))
 
 (define (get-number p)
-  (if (empty-or-not-number p)
-      ""
-      (word (first p) (get-number (bf p)))))
+  (if (not-empty-and-number p)
+      (word (first p) (get-number (bf p)))
+      ""))
 
 (define (skip-number p)
-  (if (empty-or-not-number p)
-    p
-    (skip-number (bf p))))
+  (if (not-empty-and-number p)
+    (skip-number (bf p))
+    p))
 
 (define (match-n-words name pattern-rest sent known-values)
   (let ((num (get-number name)))
@@ -388,4 +411,19 @@
 
   ; Match n words
   (equal? (match '(*3front *back) '(your mother should know))
-          '(front your mother should ! back know !)))
+          '(front your mother should ! back know !))
+
+  ; Match number
+  (equal? (match '(*front +middle *back) '(four score and 7 years ago))
+          '(front four score and ! middle 7 ! back years ago !))
+
+  (equal? (match '(*front +num *back +num) '(ab cd 6 ef gh 6))
+          '(front ab cd ! num 6 ! back ef gh !))
+
+  (equal? (match '(*front +num *back +num) '(ab cd 5 ef gh 6))
+          'failed)
+
+  (equal? (match '(*front +numa *back +numb) '(red planet 5 yellow sun 6))
+          '(front red planet ! numa 5 ! back yellow sun ! numb 6 !)))
+
+

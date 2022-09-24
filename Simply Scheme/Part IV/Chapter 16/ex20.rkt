@@ -2,6 +2,6 @@
 
 #lang racket
 
-; Placeholder
+; Solution in file ex1.rkt
 
 #t

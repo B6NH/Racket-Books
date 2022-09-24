@@ -2,6 +2,6 @@
 
 #lang racket
 
-; Not much
+; Program treats it as normal word
 
 #t

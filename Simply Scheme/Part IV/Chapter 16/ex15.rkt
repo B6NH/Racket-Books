@@ -2,6 +2,7 @@
 
 #lang racket
 
-; This would cause an error
+; They should stop when they encounter the symbol !
+; If database is empty function 'lookup' returns 'no-value
 
 #t

@@ -2,6 +2,6 @@
 
 #lang racket
 
-; Ok
+; (match '(*a and *a) '(the beatles and the beatles))
 
 #t
